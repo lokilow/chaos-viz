@@ -1,13 +1,12 @@
 {
-  "name": "vite-template-solid",
+  "name": "chaos",
   "version": "0.0.0",
   "description": "",
   "type": "module",
   "scripts": {
-    "start": "vite",
-    "dev": "vite",
-    "build": "vite build",
-    "serve": "vite preview"
+    "dev": "bun run build:wasm && vite",
+    "build": "bun run build:wasm && tsc && vite build",
+    "build:wasm": "cd core && wasm-pack build --target web --out-dir ../src/pkg"
   },
   "license": "MIT",
   "devDependencies": {
@@ -16,7 +15,9 @@
     "tailwindcss": "^4.1.13",
     "typescript": "^5.9.2",
     "vite": "^7.1.4",
-    "vite-plugin-solid": "^2.11.8"
+    "vite-plugin-solid": "^2.11.8",
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.5.0"
   },
   "dependencies": {
     "prettier": "3.7.4",

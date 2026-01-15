@@ -1,0 +1,11 @@
+# Rust
+target/
+Cargo.lock
+
+# wasm-pack artifacts
+pkg/
+wasm-pack.log
+
+# Debug files
+**/*.rs.bk
+*.pdb

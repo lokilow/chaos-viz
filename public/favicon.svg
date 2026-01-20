@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Lorenz attractor - multiple orbits -->
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path stroke="#6366f1" stroke-width="1.5" opacity="0.3"
+      d="M16,16 C16,6 4,2 2,12 C0,22 14,24 16,16 C18,8 32,10 30,20 C28,30 16,26 16,16"/>
+    <path stroke="#818cf8" stroke-width="1.2" opacity="0.5"
+      d="M16,16 C16,7 5,3 3,12 C1,21 14,23 16,16 C18,9 31,11 29,20 C27,29 16,25 16,16"/>
+    <path stroke="#a5b4fc" stroke-width="1" opacity="0.7"
+      d="M16,16 C16,8 6,4 4,12 C2,20 14,22 16,16 C18,10 30,12 28,20 C26,28 16,24 16,16"/>
+    <path stroke="#c7d2fe" stroke-width="0.8" opacity="0.85"
+      d="M16,16 C16,9 7,5 5,12 C3,19 14,21 16,16 C18,11 29,13 27,20 C25,27 16,23 16,16"/>
+    <path stroke="#e0e7ff" stroke-width="0.6"
+      d="M16,16 C16,10 8,6 6,12 C4,18 14,20 16,16 C18,12 28,14 26,20 C24,26 16,22 16,16"/>
+  </g>
+</svg>

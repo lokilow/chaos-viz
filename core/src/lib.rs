@@ -13,15 +13,15 @@ pub fn run_algo(code: &str, input_r: f64, input_x: f64) -> Vec<f64> {
 
     // 3. Run the code
     match uiua.run_str(code) {
-        Ok(compiler) => {
-            vec![1.0, 2.0 ,3.0]
-            // 4. Pop the result (assumes your Uiua code leaves one array on stack)
-            // match compiler.pop_nums() {
-            //     Ok(vec) => vec,
-            //     Err(_) => vec![] // Handle error gracefully or return empty
-            // }
+        Ok(_) => {
+            // 4. Pop the result
+            // We expect the Uiua code to leave a numeric array on the stack
+            match uiua.pop_nums() {
+                Ok(vec) => vec,
+                Err(_) => vec![] // Handle error gracefully
+            }
         },
-        Err(e) => {
+        Err(_) => {
             // Log error to console if needed
             vec![]
         }

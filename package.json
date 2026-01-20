@@ -20,7 +20,7 @@
     "vite-plugin-wasm": "^3.5.0"
   },
   "dependencies": {
-    "latex.js": "^0.12.6",
+    "katex": "^0.16.27",
     "prettier": "3.7.4",
     "solid-js": "^1.9.10",
     "uplot": "^1.6.32"

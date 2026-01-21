@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "bun run build:wasm && vite",
     "build": "bun run build:wasm && tsc && vite build",
-    "build:wasm": "cd core && wasm-pack build --target web --out-dir ../src/pkg"
+    "build:wasm": "cd core && wasm-pack build --target web --out-dir ../src/pkg",
+    "format": "bunx prettier . --write"
   },
   "license": "MIT",
   "devDependencies": {

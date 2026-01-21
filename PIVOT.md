@@ -2,9 +2,9 @@ This is a very wise pivot. trying to build a full "Uiua Pad" (code editor + form
 
 The **"Hidden Engine"** architecture is the correct choice. It separates your concerns:
 
-* **The Frontend (SolidJS):** Handles Sliders, Buttons, and Canvas rendering.
-* **The Backend (Uiua + Wasm):** Pure math. It receives inputs () and returns data arrays.
-* **The "Glue":** A tiny Rust wrapper that compiles to Wasm.
+- **The Frontend (SolidJS):** Handles Sliders, Buttons, and Canvas rendering.
+- **The Backend (Uiua + Wasm):** Pure math. It receives inputs () and returns data arrays.
+- **The "Glue":** A tiny Rust wrapper that compiles to Wasm.
 
 Here is the **Fresh Start Game Plan**.
 
@@ -12,9 +12,9 @@ Here is the **Fresh Start Game Plan**.
 
 We will use **Vite** to bundle everything.
 
-* **Math:** You write standard `.ua` files (e.g., `logistic.ua`).
-* **Loading:** Vite loads these files as raw strings.
-* **Execution:** A simple Rust Wasm function takes the string + arguments, runs the Uiua interpreter, and returns the numbers.
+- **Math:** You write standard `.ua` files (e.g., `logistic.ua`).
+- **Loading:** Vite loads these files as raw strings.
+- **Execution:** A simple Rust Wasm function takes the string + arguments, runs the Uiua interpreter, and returns the numbers.
 
 ---
 
@@ -124,36 +124,41 @@ Step ← ×⊃(×|1-)
 You import the `.ua` file as a string using Vite's `?raw` suffix.
 
 ```tsx
-import { createSignal, createEffect } from "solid-js";
-import init, { run_algo } from "chaos-engine"; // Your Wasm pkg
-import logisticCode from "../../uiua-modules/logistic.ua?raw"; // Import code as string!
+import { createSignal, createEffect } from 'solid-js'
+import init, { run_algo } from 'chaos-engine' // Your Wasm pkg
+import logisticCode from '../../uiua-modules/logistic.ua?raw' // Import code as string!
 
 const App = () => {
-  const [r, setR] = createSignal(2.5);
-  const [data, setData] = createSignal([]);
+  const [r, setR] = createSignal(2.5)
+  const [data, setData] = createSignal([])
 
   // Initialize Wasm once
   createEffect(async () => {
-    await init();
-  });
+    await init()
+  })
 
   // Re-run whenever R changes
   createEffect(() => {
-    if (!r()) return;
+    if (!r()) return
     // Pass the source code AND the inputs to the engine
-    const result = run_algo(logisticCode, r(), 0.5); 
-    setData(result);
-  });
+    const result = run_algo(logisticCode, r(), 0.5)
+    setData(result)
+  })
 
   return (
     <div>
-      <input type="range" min="0" max="4" step="0.01" 
-             value={r()} onInput={(e) => setR(parseFloat(e.target.value))} />
+      <input
+        type="range"
+        min="0"
+        max="4"
+        step="0.01"
+        value={r()}
+        onInput={(e) => setR(parseFloat(e.target.value))}
+      />
       <MyCanvasPlot data={data()} />
     </div>
-  );
-};
-
+  )
+}
 ```
 
 ---
@@ -168,9 +173,9 @@ A computational laboratory for exploring Chaos Theory using the Uiua array langu
 
 ## 1. Prerequisites
 
-* **Node.js** (v18+)
-* **Rust & Cargo** (Latest stable)
-* **Wasm-Pack** (`cargo install wasm-pack`)
+- **Node.js** (v18+)
+- **Rust & Cargo** (Latest stable)
+- **Wasm-Pack** (`cargo install wasm-pack`)
 
 ## 2. Initialization
 
@@ -211,19 +216,14 @@ We need plugins to handle the Wasm binary and the raw Uiua files.
 `npm install -D vite-plugin-wasm vite-plugin-top-level-await`
 
 ```typescript
-import { defineConfig } from 'vite';
-import solid from 'vite-plugin-solid';
-import wasm from "vite-plugin-wasm";
-import topLevelAwait from "vite-plugin-top-level-await";
+import { defineConfig } from 'vite'
+import solid from 'vite-plugin-solid'
+import wasm from 'vite-plugin-wasm'
+import topLevelAwait from 'vite-plugin-top-level-await'
 
 export default defineConfig({
-  plugins: [
-    solid(),
-    wasm(),
-    topLevelAwait()
-  ],
-});
-
+  plugins: [solid(), wasm(), topLevelAwait()],
+})
 ```
 
 ### C. Build Script (`package.json`)

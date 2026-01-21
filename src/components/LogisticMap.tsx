@@ -1,7 +1,6 @@
 import { createSignal, onMount, Show } from 'solid-js'
-import init, { run_algo } from '../pkg/chaos_engine'
+import { init, identity } from '../uiua'
 import CanvasPlot from './CanvasPlot'
-import identityCode from '../../uiua-modules/identity.ua?raw'
 
 // Coordinate system configuration
 type PlotBounds = {
@@ -40,10 +39,8 @@ export default function LogisticMap() {
       await init()
       setStatus('Wasm initialized, running Uiua...')
 
-      // Run the identity function via Uiua (loaded from .ua file)
-      const result = run_algo(identityCode, 0, 0) // r and x not used for identity
-
-      console.log('Uiua result:', result)
+      // Run the identity function via Uiua
+      const result = identity(10)
       setPoints(result)
       setInitialized(true)
       setStatus('Ready')

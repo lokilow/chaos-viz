@@ -1,7 +1,7 @@
 ~ "prelude.ua" ~ ToPlotData
-# Identity function for plotting y = x
-# Returns interleaved pairs: [x0, y0, x1, y1, ...]
+# Identity function y = x for [0, 1] domain
+# Returns 101 points from 0 to 1 inclusive
 
-Identity ← ˙⊟ ⇡
+Identity ← ˙⊟ ÷10⇡11
 
-ToPlotData Identity 10
+ToPlotData Identity

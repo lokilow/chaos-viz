@@ -1,45 +1,18 @@
 import { createSignal, onMount, Show } from 'solid-js'
 import { init, identity } from '../uiua'
-import CanvasPlot from './CanvasPlot'
-
-// Coordinate system configuration
-type PlotBounds = {
-  xMin: number
-  xMax: number
-  yMin: number
-  yMax: number
-}
-
-// Transform from math coordinates to canvas pixels
-function toCanvasX(x: number, bounds: PlotBounds, width: number): number {
-  return ((x - bounds.xMin) / (bounds.xMax - bounds.xMin)) * width
-}
-
-function toCanvasY(y: number, bounds: PlotBounds, height: number): number {
-  // Canvas Y is inverted (0 at top)
-  return height - ((y - bounds.yMin) / (bounds.yMax - bounds.yMin)) * height
-}
+import CanvasPlot, { type Plot } from './CanvasPlot'
 
 export default function LogisticMap() {
   const [initialized, setInitialized] = createSignal(false)
   const [status, setStatus] = createSignal('Initializing Wasm...')
   const [points, setPoints] = createSignal<Float64Array | null>(null)
 
-  // Default bounds for identity function test
-  const bounds: PlotBounds = {
-    xMin: 0,
-    xMax: 10,
-    yMin: 0,
-    yMax: 10,
-  }
+  const bounds = { xMin: -0.05, xMax: 1.05, yMin: -0.05, yMax: 1.05 }
 
   onMount(async () => {
     try {
-      // Initialize the wasm module
       await init()
       setStatus('Wasm initialized, running Uiua...')
-
-      // Run the identity function via Uiua
       const result = identity(10)
       setPoints(result)
       setInitialized(true)
@@ -50,73 +23,21 @@ export default function LogisticMap() {
     }
   })
 
-  const drawPlot = (
-    ctx: CanvasRenderingContext2D,
-    width: number,
-    height: number
-  ) => {
+  const drawPlot = (ctx: CanvasRenderingContext2D, plot: Plot) => {
     const data = points()
     if (!data || data.length === 0) return
 
-    // Background (off-white)
-    ctx.fillStyle = '#f5f5f4'
-    ctx.fillRect(0, 0, width, height)
-
-    // Draw axes (silver)
-    ctx.strokeStyle = '#d6d3d1'
-    ctx.lineWidth = 1
-
-    // X axis (y=0)
-    const y0 = toCanvasY(0, bounds, height)
-    ctx.beginPath()
-    ctx.moveTo(0, y0)
-    ctx.lineTo(width, y0)
-    ctx.stroke()
-
-    // Y axis (x=0)
-    const x0 = toCanvasX(0, bounds, width)
-    ctx.beginPath()
-    ctx.moveTo(x0, 0)
-    ctx.lineTo(x0, height)
-    ctx.stroke()
-
-    // Data is interleaved: [x0, y0, x1, y1, x2, y2, ...]
-    // Draw the identity line (y=x) - deep grass green
+    // Draw the identity line (y=x)
     ctx.strokeStyle = '#15803d'
     ctx.lineWidth = 2
     ctx.beginPath()
-
     for (let i = 0; i < data.length; i += 2) {
-      const x = data[i]
-      const y = data[i + 1]
-      const canvasX = toCanvasX(x, bounds, width)
-      const canvasY = toCanvasY(y, bounds, height)
-
-      if (i === 0) {
-        ctx.moveTo(canvasX, canvasY)
-      } else {
-        ctx.lineTo(canvasX, canvasY)
-      }
+      const px = plot.toX(data[i])
+      const py = plot.toY(data[i + 1])
+      if (i === 0) ctx.moveTo(px, py)
+      else ctx.lineTo(px, py)
     }
     ctx.stroke()
-
-    // Draw points - darker green for contrast
-    ctx.fillStyle = '#166534'
-    for (let i = 0; i < data.length; i += 2) {
-      const x = data[i]
-      const y = data[i + 1]
-      const canvasX = toCanvasX(x, bounds, width)
-      const canvasY = toCanvasY(y, bounds, height)
-
-      ctx.beginPath()
-      ctx.arc(canvasX, canvasY, 4, 0, Math.PI * 2)
-      ctx.fill()
-    }
-
-    // Labels (silver-600)
-    ctx.fillStyle = '#57534e'
-    ctx.font = '12px monospace'
-    ctx.fillText('y = x (via Uiua)', 10, 20)
   }
 
   return (
@@ -134,6 +55,10 @@ export default function LogisticMap() {
         <CanvasPlot
           width={600}
           height={400}
+          bounds={bounds}
+          background="#f5f5f4"
+          axes={true}
+          grid={{ x: 0.2, y: 0.2 }}
           run={drawPlot}
           class="border border-silver-300 rounded"
         />

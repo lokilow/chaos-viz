@@ -1,7 +1,15 @@
 ~ "prelude.ua" ~ ToPlotData
-# Identity function y = x for [-0.1, 1.1] domain (with padding)
-# Returns 13 points from -0.1 to 1.1 inclusive
+# Identity function y = x
+# Stack: n max min → interleaved [x0, y0, x1, y1, ...]
 
-Identity ← ˙⊟ -0.1÷10⇡13
+# Linspace: n max min → [min, ..., max] with n evenly spaced points
+Linspace ← (
+  ⊃(÷⊃(-1|⇡)|⋅(-:)|⋅⋅∘) # [0..1], range, min
+  :⊙:                   # min, range, [0..1]
+  ⊙×                    # min, scaled
+  +                     # result
+)
 
-ToPlotData Identity
+Identity ← ˙⊟ Linspace
+
+ToPlotData Identity 13 1.1 ¯0.1

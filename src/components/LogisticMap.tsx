@@ -27,7 +27,7 @@ export default function LogisticMap() {
     try {
       await init()
       setStatus('Wasm initialized, running Uiua...')
-      const result = identity(10)
+      const result = identity(bounds.xMin, bounds.xMax)
       setPoints(result)
       setInitialized(true)
       setStatus('Ready')

@@ -6,9 +6,21 @@ import { run } from './wasm'
 // Uiua source files
 import identityCode from '../../uiua-modules/identity.ua?raw'
 
-/** Identity function: y = x for x in [0, n) */
-export function identity(n = 10): Float64Array {
-  return run(identityCode)
+/** Format number for Uiua (uses ¯ for negative) */
+function uiuaNum(n: number): string {
+  return n < 0 ? `¯${Math.abs(n)}` : String(n)
+}
+
+/** Identity function: y = x for given bounds */
+export function identity(
+  min: number,
+  max: number,
+  numPoints = 101
+): Float64Array {
+  // Append call with params after function definitions
+  return run(
+    `${identityCode}\nToPlotData Identity ${numPoints} ${uiuaNum(max)} ${uiuaNum(min)}`
+  )
 }
 
 /** Logistic map parabola: y = r*x*(1-x) for x in [0, 1] */

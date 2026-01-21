@@ -27,14 +27,12 @@ function stripImports(code: string): string {
 }
 
 /** Run Uiua code and return the result as a Float64Array */
-export function run(code: string, r = 0, x = 0): Float64Array {
-  const withPrelude = prelude + '\n' + stripImports(code)
-  const result = run_algo(withPrelude, r, x)
+export function run(code: string): Float64Array {
+  const processed = prelude + '\n' + stripImports(code)
+  const result = run_algo(processed)
   if (import.meta.env.DEV) {
     console.debug('Uiua:', {
       code: code.trim().split('\n').pop(),
-      r,
-      x,
       result,
     })
   }

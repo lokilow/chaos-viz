@@ -1,5 +1,5 @@
-use wasm_bindgen::prelude::*;
 use uiua::{Uiua, Value};
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 extern "C" {
@@ -12,15 +12,11 @@ macro_rules! console_log {
 }
 
 #[wasm_bindgen]
-pub fn run_algo(code: &str, input_r: f64, input_x: f64) -> Vec<f64> {
+pub fn run_algo(code: &str) -> Vec<f64> {
     // 1. Create a safe Uiua instance (no file system access)
     let mut uiua = Uiua::with_safe_sys();
 
-    // 2. Push arguments onto the stack (Uiua is stack-based!)
-    uiua.push(input_x);
-    uiua.push(input_r);
-
-    // 3. Run the code
+    // 2. Run the code
     match uiua.run_str(code) {
         Ok(_) => {
             // 4. Pop the result
@@ -30,13 +26,13 @@ pub fn run_algo(code: &str, input_r: f64, input_x: f64) -> Vec<f64> {
                     let nums = extract_nums(&val);
                     console_log!("Uiua returned {} numbers", nums.len());
                     nums
-                },
+                }
                 Err(e) => {
                     console_log!("Uiua pop error: {}", e);
                     vec![]
                 }
             }
-        },
+        }
         Err(e) => {
             console_log!("Uiua run error: {}", e);
             vec![]
@@ -50,11 +46,11 @@ fn extract_nums(val: &Value) -> Vec<f64> {
         Value::Num(arr) => {
             // Use elements() iterator to access the data
             arr.elements().copied().collect()
-        },
+        }
         Value::Byte(arr) => {
             // Convert bytes to f64
             arr.elements().map(|&b| b as f64).collect()
-        },
+        }
         _ => {
             console_log!("Unsupported value type for numeric extraction");
             vec![]

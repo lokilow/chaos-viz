@@ -71,7 +71,12 @@ function App() {
       </main>
 
       <footer class="bg-silver-200 border-t border-silver-300 p-6 text-center text-silver-500 text-sm">
-        <p>&copy; {new Date().getFullYear()} Chaos & Fractals</p>
+        <a
+          href="https://noisegate.io"
+          class="hover:text-grass-700 transition-colors"
+        >
+          noisegate
+        </a>
       </footer>
     </div>
   )

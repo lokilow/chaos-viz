@@ -6,6 +6,7 @@ import wasm from 'vite-plugin-wasm'
 import devtools from 'solid-devtools/vite'
 
 export default defineConfig({
+  base: '/chaos-viz/',
   plugins: [devtools(), solidPlugin(), wasm(), tailwindcss(), topLevelAwait()],
   server: {
     port: 3000,

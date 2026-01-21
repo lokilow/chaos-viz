@@ -49,9 +49,6 @@ export default function LogisticMap() {
           <div class="text-grass-600 font-mono animate-pulse">{status()}</div>
         }
       >
-        <div class="text-grass-700 font-mono mb-4 text-sm">
-          {status()} - Uiua wired up!
-        </div>
         <CanvasPlot
           width={600}
           height={400}

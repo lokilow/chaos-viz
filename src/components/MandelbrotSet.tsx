@@ -19,12 +19,6 @@ export default function MandelbrotSet() {
           <div class="text-grass-600 font-mono animate-pulse">{status()}</div>
         }
       >
-        <div class="text-grass-700 font-mono mb-4">
-          {status()}{' '}
-          <span class="text-silver-400 text-sm">
-            (Ready for plotting logic)
-          </span>
-        </div>
         <div class="h-64 bg-silver-200 rounded flex items-center justify-center text-silver-400">
           [Canvas Area]
         </div>

@@ -1,12 +1,14 @@
 import { createSignal, onMount, Show, For } from 'solid-js'
-import { init, identity } from '../uiua'
+import { init, identity, logisticParabola } from '../uiua'
 import CanvasPlot, { type Plot } from './CanvasPlot'
 import Latex from './Latex'
 
 export default function LogisticMap() {
   const [initialized, setInitialized] = createSignal(false)
   const [status, setStatus] = createSignal('Initializing Wasm...')
-  const [points, setPoints] = createSignal<Float64Array | null>(null)
+  const [identityLine, setIdentityLine] = createSignal<Float64Array | null>(
+    null
+  )
 
   const [r, setR] = createSignal(2.5)
   const [visibleIterations, setVisibleIterations] = createSignal({
@@ -26,9 +28,7 @@ export default function LogisticMap() {
   onMount(async () => {
     try {
       await init()
-      setStatus('Wasm initialized, running Uiua...')
-      const result = identity(bounds.xMin, bounds.xMax)
-      setPoints(result)
+      setIdentityLine(identity(-0.1, 1.1))
       setInitialized(true)
       setStatus('Ready')
     } catch (err) {
@@ -38,16 +38,31 @@ export default function LogisticMap() {
   })
 
   const drawPlot = (ctx: CanvasRenderingContext2D, plot: Plot) => {
-    const data = points()
-    if (!data || data.length === 0) return
+    const idLine = identityLine()
+    if (!idLine) return
 
-    // Draw the identity line (y=x)
+    // Draw the identity line y=x (static, gray dashed)
+    ctx.strokeStyle = '#78716c'
+    ctx.lineWidth = 1
+    ctx.setLineDash([4, 4])
+    ctx.beginPath()
+    for (let i = 0; i < idLine.length; i += 2) {
+      const px = plot.toX(idLine[i])
+      const py = plot.toY(idLine[i + 1])
+      if (i === 0) ctx.moveTo(px, py)
+      else ctx.lineTo(px, py)
+    }
+    ctx.stroke()
+    ctx.setLineDash([])
+
+    // Draw the logistic parabola (reactive to r)
+    const parabola = logisticParabola(r())
     ctx.strokeStyle = '#15803d'
     ctx.lineWidth = 2
     ctx.beginPath()
-    for (let i = 0; i < data.length; i += 2) {
-      const px = plot.toX(data[i])
-      const py = plot.toY(data[i + 1])
+    for (let i = 0; i < parabola.length; i += 2) {
+      const px = plot.toX(parabola[i])
+      const py = plot.toY(parabola[i + 1])
       if (i === 0) ctx.moveTo(px, py)
       else ctx.lineTo(px, py)
     }

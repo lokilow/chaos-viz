@@ -5,6 +5,7 @@ import { run } from './wasm'
 
 // Uiua source files
 import identityCode from '../../uiua-modules/identity.ua?raw'
+import logisticCode from '../../uiua-modules/logistic.ua?raw'
 
 /** Format number for Uiua (uses ¯ for negative) */
 function uiuaNum(n: number): string {
@@ -24,9 +25,8 @@ export function identity(
 }
 
 /** Logistic map parabola: y = r*x*(1-x) for x in [0, 1] */
-export function logisticParabola(r: number, numPoints = 100): Float64Array {
-  // TODO: implement logistic.ua
-  throw new Error('Not implemented')
+export function logisticParabola(r: number): Float64Array {
+  return run(`${logisticCode}\nLogisticCurve ${r}`)
 }
 
 /** Cobweb iteration path for logistic map */

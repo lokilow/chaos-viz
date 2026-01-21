@@ -11,19 +11,21 @@ export default function MandelbrotSet() {
   })
 
   return (
-    <div class="p-6 bg-white rounded-lg shadow">
+    <div class="p-6 bg-silver-50 rounded-lg shadow">
       <h2 class="text-xl font-bold mb-4">Mandelbrot Set (Fractal)</h2>
       <Show
         when={initialized()}
         fallback={
-          <div class="text-blue-600 font-mono animate-pulse">{status()}</div>
+          <div class="text-grass-600 font-mono animate-pulse">{status()}</div>
         }
       >
-        <div class="text-green-600 font-mono mb-4">
+        <div class="text-grass-700 font-mono mb-4">
           {status()}{' '}
-          <span class="text-gray-400 text-sm">(Ready for plotting logic)</span>
+          <span class="text-silver-400 text-sm">
+            (Ready for plotting logic)
+          </span>
         </div>
-        <div class="h-64 bg-gray-100 rounded flex items-center justify-center text-gray-400">
+        <div class="h-64 bg-silver-200 rounded flex items-center justify-center text-silver-400">
           [Canvas Area]
         </div>
       </Show>

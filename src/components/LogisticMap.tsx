@@ -58,12 +58,12 @@ export default function LogisticMap() {
     const data = points()
     if (!data || data.length === 0) return
 
-    // Background
-    ctx.fillStyle = '#fafafa'
+    // Background (off-white)
+    ctx.fillStyle = '#f5f5f4'
     ctx.fillRect(0, 0, width, height)
 
-    // Draw axes
-    ctx.strokeStyle = '#ccc'
+    // Draw axes (silver)
+    ctx.strokeStyle = '#d6d3d1'
     ctx.lineWidth = 1
 
     // X axis (y=0)
@@ -81,8 +81,8 @@ export default function LogisticMap() {
     ctx.stroke()
 
     // Data is interleaved: [x0, y0, x1, y1, x2, y2, ...]
-    // Draw the identity line (y=x)
-    ctx.strokeStyle = '#3b82f6'
+    // Draw the identity line (y=x) - deep grass green
+    ctx.strokeStyle = '#15803d'
     ctx.lineWidth = 2
     ctx.beginPath()
 
@@ -100,8 +100,8 @@ export default function LogisticMap() {
     }
     ctx.stroke()
 
-    // Draw points
-    ctx.fillStyle = '#ef4444'
+    // Draw points - darker green for contrast
+    ctx.fillStyle = '#166534'
     for (let i = 0; i < data.length; i += 2) {
       const x = data[i]
       const y = data[i + 1]
@@ -113,29 +113,29 @@ export default function LogisticMap() {
       ctx.fill()
     }
 
-    // Labels
-    ctx.fillStyle = '#666'
+    // Labels (silver-600)
+    ctx.fillStyle = '#57534e'
     ctx.font = '12px monospace'
     ctx.fillText('y = x (via Uiua)', 10, 20)
   }
 
   return (
-    <div class="p-6 bg-white rounded-lg shadow">
+    <div class="p-6 bg-silver-50 rounded-lg shadow">
       <h2 class="text-xl font-bold mb-4">Logistic Map (1D)</h2>
       <Show
         when={initialized()}
         fallback={
-          <div class="text-blue-600 font-mono animate-pulse">{status()}</div>
+          <div class="text-grass-600 font-mono animate-pulse">{status()}</div>
         }
       >
-        <div class="text-green-600 font-mono mb-4 text-sm">
+        <div class="text-grass-700 font-mono mb-4 text-sm">
           {status()} - Uiua wired up!
         </div>
         <CanvasPlot
           width={600}
           height={400}
           run={drawPlot}
-          class="border border-gray-200 rounded"
+          class="border border-silver-300 rounded"
         />
       </Show>
     </div>

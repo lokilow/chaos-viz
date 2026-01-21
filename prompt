@@ -1,0 +1,5 @@
+Please update the colors and styling of this app. I like green better than blue. Like a deep grass green. and perhaps off white or silverish. 
+
+It's a solidjs app using tailwind. does it make sense to use daisyui componenets? How can I set up a tailwind theme?
+
+Also - please remove references to "computational lab" that's not my organization. I was thinking of deployong this to github pages. what license should I add?

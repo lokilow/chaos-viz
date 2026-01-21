@@ -23,19 +23,18 @@ function App() {
   }
 
   return (
-    <div class="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
+    <div class="min-h-screen bg-silver-100 flex flex-col font-sans text-silver-900">
       {/* Header */}
-      <header class="bg-blue-900 text-white p-4 shadow-md">
+      <header class="bg-grass-900 text-white p-4 shadow-md">
         <div class="max-w-5xl mx-auto flex items-center justify-between">
           <h1 class="text-2xl font-bold tracking-tight">Chaos & Fractals</h1>
-          <div class="text-blue-200 text-sm">Computational Lab</div>
         </div>
       </header>
 
       {/* Main Content */}
       <main class="flex-1 w-full max-w-5xl mx-auto p-4 md:p-8">
         {/* Tab Navigation */}
-        <div class="flex border-b border-gray-200 mb-8 overflow-x-auto">
+        <div class="flex border-b border-silver-300 mb-8 overflow-x-auto">
           <For each={TABS}>
             {(tab) => (
               <button
@@ -44,8 +43,8 @@ function App() {
                   py-2 px-6 font-medium text-sm transition-colors border-b-2 whitespace-nowrap
                   ${
                     activeTab() === tab.id
-                      ? 'border-blue-600 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'border-grass-600 text-grass-700'
+                      : 'border-transparent text-silver-500 hover:text-silver-700 hover:border-silver-400'
                   }
                 `}
               >
@@ -71,8 +70,8 @@ function App() {
         </div>
       </main>
 
-      <footer class="bg-gray-100 border-t border-gray-200 p-6 text-center text-gray-500 text-sm">
-        <p>&copy; {new Date().getFullYear()} Computational Laboratory</p>
+      <footer class="bg-silver-200 border-t border-silver-300 p-6 text-center text-silver-500 text-sm">
+        <p>&copy; {new Date().getFullYear()} Chaos & Fractals</p>
       </footer>
     </div>
   )

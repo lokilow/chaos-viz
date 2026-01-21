@@ -7,11 +7,17 @@
     "dev": "bun run build:wasm && vite",
     "build": "bun run build:wasm && tsc && vite build",
     "build:wasm": "cd core && wasm-pack build --target web --out-dir ../src/pkg",
-    "format": "bunx prettier . --write"
+    "format": "prettier . --write",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*": "prettier --ignore-unknown --write"
   },
   "license": "MIT",
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "solid-devtools": "^0.34.4",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",

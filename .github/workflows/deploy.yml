@@ -45,7 +45,15 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Cache WASM output
+        id: wasm-cache
+        uses: actions/cache@v4
+        with:
+          path: src/pkg
+          key: ${{ runner.os }}-wasm-${{ hashFiles('core/src/**', 'core/Cargo.lock') }}
+
       - name: Build WASM
+        if: steps.wasm-cache.outputs.cache-hit != 'true'
         run: cd core && wasm-pack build --target web --out-dir ../src/pkg
 
       - name: Build

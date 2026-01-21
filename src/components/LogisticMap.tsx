@@ -7,7 +7,7 @@ export default function LogisticMap() {
   const [status, setStatus] = createSignal('Initializing Wasm...')
   const [points, setPoints] = createSignal<Float64Array | null>(null)
 
-  const bounds = { xMin: -0.05, xMax: 1.05, yMin: -0.05, yMax: 1.05 }
+  const bounds = { xMin: -0.1, xMax: 1.1, yMin: -0.1, yMax: 1.1 }
 
   onMount(async () => {
     try {
@@ -58,6 +58,7 @@ export default function LogisticMap() {
           bounds={bounds}
           background="#f5f5f4"
           axes={true}
+          axisLabels={{ x: 'xₙ', y: 'f(xₙ)' }}
           grid={{ x: 0.2, y: 0.2 }}
           run={drawPlot}
           class="border border-silver-300 rounded"

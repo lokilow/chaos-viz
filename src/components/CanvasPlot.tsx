@@ -21,6 +21,7 @@ type CanvasPlotProps = {
   bounds: Bounds
   background?: string
   axes?: boolean
+  axisLabels?: { x: string; y: string }
   grid?: { x: number; y: number } | false
   run: (ctx: CanvasRenderingContext2D, plot: Plot) => void
   class?: string
@@ -169,6 +170,26 @@ export default function CanvasPlot(props: CanvasPlotProps) {
         ctx.closePath()
         ctx.fill()
       }
+
+      // Axis labels
+      if (props.axisLabels) {
+        ctx.fillStyle = '#57534e'
+        ctx.font = '13px monospace'
+
+        // X axis label (bottom right)
+        if (bounds.yMin <= 0 && bounds.yMax >= 0) {
+          ctx.textAlign = 'right'
+          ctx.textBaseline = 'top'
+          ctx.fillText(props.axisLabels.x, width - 4, toY(0) + 8)
+        }
+
+        // Y axis label (top left)
+        if (bounds.xMin <= 0 && bounds.xMax >= 0) {
+          ctx.textAlign = 'left'
+          ctx.textBaseline = 'top'
+          ctx.fillText(props.axisLabels.y, toX(0) + 8, 4)
+        }
+      }
     }
 
     // User drawing
@@ -184,6 +205,7 @@ export default function CanvasPlot(props: CanvasPlotProps) {
     props.height
     props.bounds
     props.axes
+    props.axisLabels
     props.grid
     props.background
     render()

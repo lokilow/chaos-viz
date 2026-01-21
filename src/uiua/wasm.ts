@@ -18,9 +18,17 @@ export async function init(): Promise<void> {
   initialized = true
 }
 
+/** Strip import lines (wasm can't access filesystem, prelude is prepended instead) */
+function stripImports(code: string): string {
+  return code
+    .split('\n')
+    .filter((line) => !line.startsWith('~'))
+    .join('\n')
+}
+
 /** Run Uiua code and return the result as a Float64Array */
 export function run(code: string, r = 0, x = 0): Float64Array {
-  const withPrelude = prelude + '\n' + code
+  const withPrelude = prelude + '\n' + stripImports(code)
   const result = run_algo(withPrelude, r, x)
   if (import.meta.env.DEV) {
     console.debug('Uiua:', {

@@ -21,7 +21,7 @@ export function identity(
 ): Float64Array {
   // Append call with params after function definitions
   return run(
-    `${identityCode}\nToPlotData Identity ${numPoints} ${uiuaNum(max)} ${uiuaNum(min)}`
+    `${identityCode}\nToPlotData Identity ${numPoints} ${uiuaNum(min)} ${uiuaNum(max)}`
   )
 }
 

@@ -274,12 +274,19 @@ export interface CyclePoint {
 export interface IterationState {
   x: number
   y: number
+  /** Displayed step (scrubbed when playbackStep is set, otherwise latest). */
   step: number
+  /** Latest computed step available in history. */
+  maxStep: number
   waiting: boolean
   icX: number
   icY: number
   detectedPeriod: number | null // null = not yet detected, 0 = chaotic/none
   cyclePoints: CyclePoint[]
+  /** When non-null, render this historical step instead of live/latest. */
+  playbackStep: number | null
+  /** True when the simulation loop is actively iterating forward. */
+  isRunning: boolean
 }
 
 export interface IterationHandle {
@@ -287,6 +294,7 @@ export interface IterationHandle {
   reset: () => void
   update: (overrides: IterationOverrides) => void
   startAt: (x: number, y: number) => void
+  setPlaybackStep: (step: number | null) => void
   pause: () => boolean
   resume: (shouldLoop?: boolean) => void
   getState: () => IterationState
@@ -305,7 +313,8 @@ export function mountIteration(
   let speed = overrides?.speed ?? d.speed
   let mapParams = overrides?.params ?? { ...mapDef.defaultParams }
 
-  let orbit: { x: number; y: number }[] = []
+  let trajectory: { x: number; y: number }[] = []
+  let playbackStep: number | null = null
   let icX = 0
   let icY = 0
   let curX = 0
@@ -325,6 +334,20 @@ export function mountIteration(
   const TRANSIENT = 500 // ignore first N iterates as transient
   const PERIOD_TOL = 1e-8
   const MAX_PERIOD_CHECK = 128
+
+  const clampPlaybackStep = (step: number) =>
+    Math.max(0, Math.min(Math.round(step), curStep))
+
+  const getRenderStep = () =>
+    playbackStep === null ? curStep : clampPlaybackStep(playbackStep)
+
+  const getPointAtStep = (step: number) => {
+    if (trajectory.length === 0) {
+      return { x: curX, y: curY }
+    }
+    const clamped = Math.max(0, Math.min(step, trajectory.length - 1))
+    return trajectory[clamped]
+  }
 
   function detectPeriod() {
     const len = historyX.length
@@ -371,7 +394,8 @@ export function mountIteration(
     icY = y
     curX = x
     curY = y
-    orbit = [{ x, y }]
+    trajectory = [{ x, y }]
+    playbackStep = null
     historyX = []
     historyY = []
     detectedPeriod = null
@@ -392,13 +416,16 @@ export function mountIteration(
   }
 
   let instance: p5
-  let isLooping = true
+  let isLooping = false
 
   const sketch = (p: p5) => {
     p.setup = () => {
       p.createCanvas(W, H)
       p.background(255)
       p.frameRate(30)
+      // Render the waiting message once and idle until the user picks an IC.
+      p.noLoop()
+      isLooping = false
     }
 
     p.draw = () => {
@@ -471,23 +498,19 @@ export function mountIteration(
       }
 
       // iterate
-      if (!diverged && curStep < iterates) {
+      if (isLooping && !diverged && curStep < iterates) {
         for (let i = 0; i < speed; i++) {
-          if (curStep >= iterates || diverged) break
+          if (curStep >= iterates) break
           const [nx, ny] = mapDef.step(curX, curY, mapParams)
+          if (Math.abs(nx) > 1e10 || Math.abs(ny) > 1e10) {
+            diverged = true
+            break
+          }
           curX = nx
           curY = ny
           curStep++
 
-          if (Math.abs(curX) > 1e10 || Math.abs(curY) > 1e10) {
-            diverged = true
-            break
-          }
-
-          orbit.push({ x: curX, y: curY })
-          if (orbit.length > lag) {
-            orbit.shift()
-          }
+          trajectory.push({ x: curX, y: curY })
 
           // record post-transient history for period detection
           if (curStep > TRANSIENT) {
@@ -504,22 +527,28 @@ export function mountIteration(
         stateCallback?.()
       }
 
+      const renderStep = getRenderStep()
+      const tailStart = Math.max(0, renderStep - lag)
+
       // draw orbit tail
-      if (orbit.length > 1) {
+      if (trajectory.length > 1 && renderStep > 0) {
         p.stroke(220, 50, 50, 80)
         p.strokeWeight(1)
-        for (let i = 1; i < orbit.length; i++) {
+        for (let i = tailStart + 1; i <= renderStep; i++) {
+          const prev = getPointAtStep(i - 1)
+          const next = getPointAtStep(i)
           p.line(
-            mapPx(p, orbit[i - 1].x),
-            mapPy(p, orbit[i - 1].y),
-            mapPx(p, orbit[i].x),
-            mapPy(p, orbit[i].y)
+            mapPx(p, prev.x),
+            mapPy(p, prev.y),
+            mapPx(p, next.x),
+            mapPy(p, next.y)
           )
         }
       }
       p.strokeWeight(4)
       p.stroke(220, 50, 50)
-      for (const pt of orbit) {
+      for (let i = tailStart; i <= renderStep; i++) {
+        const pt = getPointAtStep(i)
         p.point(mapPx(p, pt.x), mapPy(p, pt.y))
       }
 
@@ -556,14 +585,22 @@ export function mountIteration(
         p.textAlign(p.CENTER, p.TOP)
         p.textSize(14)
         p.text('Orbit diverged!', W / 2, MARGIN.top + 10)
+        if (isLooping) {
+          p.noLoop()
+          isLooping = false
+          stateCallback?.()
+        }
       } else if (curStep >= iterates) {
         // final period detection attempt
         if (detectedPeriod === null && historyX.length > 2) {
           detectPeriod()
           stateCallback?.()
         }
-        p.noLoop()
-        isLooping = false
+        if (isLooping) {
+          p.noLoop()
+          isLooping = false
+          stateCallback?.()
+        }
       }
     }
 
@@ -598,7 +635,8 @@ export function mountIteration(
   new p5(sketch, container)
 
   function doReset() {
-    orbit = []
+    trajectory = []
+    playbackStep = null
     historyX = []
     historyY = []
     detectedPeriod = null
@@ -610,9 +648,10 @@ export function mountIteration(
     curStep = 0
     waiting = true
     diverged = false
+    instance.noLoop()
+    isLooping = false
+    instance.redraw()
     stateCallback?.()
-    instance.loop()
-    isLooping = true
   }
 
   return {
@@ -621,20 +660,30 @@ export function mountIteration(
     },
     reset: doReset,
     startAt: beginOrbit,
+    setPlaybackStep(step) {
+      playbackStep = step === null ? null : clampPlaybackStep(step)
+      stateCallback?.()
+      instance.redraw()
+    },
     pause() {
       const wasLooping = isLooping
       instance.noLoop()
       isLooping = false
       instance.redraw()
+      stateCallback?.()
       return wasLooping
     },
     resume(shouldLoop = true) {
-      if (shouldLoop) {
+      if (shouldLoop && !waiting && !diverged && curStep < iterates) {
+        playbackStep = null
         instance.loop()
         isLooping = true
       } else {
+        instance.noLoop()
+        isLooping = false
         instance.redraw()
       }
+      stateCallback?.()
     },
     update(ov) {
       if (ov.iterates !== undefined) iterates = ov.iterates
@@ -644,15 +693,20 @@ export function mountIteration(
       doReset()
     },
     getState(): IterationState {
+      const renderStep = getRenderStep()
+      const point = getPointAtStep(renderStep)
       return {
-        x: curX,
-        y: curY,
-        step: curStep,
+        x: point.x,
+        y: point.y,
+        step: renderStep,
+        maxStep: curStep,
         waiting,
         icX,
         icY,
         detectedPeriod,
         cyclePoints: [...cyclePoints],
+        playbackStep,
+        isRunning: isLooping && !waiting && !diverged && curStep < iterates,
       }
     },
     onStateChange(fn: () => void) {

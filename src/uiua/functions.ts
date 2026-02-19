@@ -6,6 +6,7 @@ import { run } from './wasm'
 // Uiua source files
 import identityCode from '../../uiua-modules/identity.ua?raw'
 import logisticCode from '../../uiua-modules/logistic.ua?raw'
+import cobwebCode from '../../uiua-modules/cobweb.ua?raw'
 
 /** Format number for Uiua (uses ¯ for negative) */
 function uiuaNum(n: number): string {
@@ -31,6 +32,7 @@ export function logisticParabola(r: number): Float64Array {
 
 /** Cobweb iteration path for logistic map */
 export function cobweb(r: number, x0: number, iterations = 50): Float64Array {
-  // TODO: implement cobweb.ua
-  throw new Error('Not implemented')
+  const safeIterations = Math.max(1, Math.floor(iterations))
+  const steps = safeIterations + 1
+  return run(`${cobwebCode}\nCobwebPath ${steps} ${uiuaNum(r)} ${uiuaNum(x0)}`)
 }

@@ -13,6 +13,10 @@ if [[ -n "$MODE" && "$MODE" != "--if-needed" ]]; then
 fi
 
 if [[ ! -f "$LOCK_FILE" ]]; then
+  if [[ "$MODE" == "--if-needed" ]]; then
+    echo "Skipping sync: Missing lock file $LOCK_FILE"
+    exit 0
+  fi
   echo "Missing lock file: $LOCK_FILE" >&2
   exit 1
 fi
@@ -29,6 +33,10 @@ VERSION="$(
 )"
 
 if [[ -z "${VERSION:-}" ]]; then
+  if [[ "$MODE" == "--if-needed" ]]; then
+    echo "Skipping sync: Could not find uiua_parser version in $LOCK_FILE"
+    exit 0
+  fi
   echo "Could not find uiua_parser version in $LOCK_FILE" >&2
   exit 1
 fi
@@ -38,6 +46,10 @@ MATCHES=("$HOME"/.cargo/registry/src/*/"uiua_parser-$VERSION"/src/defs.rs)
 shopt -u nullglob
 
 if [[ ${#MATCHES[@]} -eq 0 ]]; then
+  if [[ "$MODE" == "--if-needed" ]]; then
+    echo "Skipping sync: Could not find local source for uiua_parser-$VERSION."
+    exit 0
+  fi
   echo "Could not find local source for uiua_parser-$VERSION." >&2
   echo "Try: cargo fetch --manifest-path core/Cargo.toml" >&2
   exit 1

@@ -50,7 +50,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: src/pkg
-          key: ${{ runner.os }}-wasm-${{ hashFiles('core/src/**', 'core/Cargo.lock') }}
+          key: ${{ runner.os }}-wasm-${{ hashFiles('core/src/**', 'core/Cargo.toml', 'core/Cargo.lock') }}
 
       - name: Build WASM
         if: steps.wasm-cache.outputs.cache-hit != 'true'

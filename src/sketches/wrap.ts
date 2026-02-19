@@ -287,6 +287,8 @@ export interface IterationHandle {
   reset: () => void
   update: (overrides: IterationOverrides) => void
   startAt: (x: number, y: number) => void
+  pause: () => boolean
+  resume: (shouldLoop?: boolean) => void
   getState: () => IterationState
   onStateChange: (fn: () => void) => void
 }
@@ -379,6 +381,7 @@ export function mountIteration(
     diverged = false
     stateCallback?.()
     instance.loop()
+    isLooping = true
   }
 
   function mapPx(p: p5, val: number) {
@@ -389,6 +392,7 @@ export function mountIteration(
   }
 
   let instance: p5
+  let isLooping = true
 
   const sketch = (p: p5) => {
     p.setup = () => {
@@ -559,6 +563,7 @@ export function mountIteration(
           stateCallback?.()
         }
         p.noLoop()
+        isLooping = false
       }
     }
 
@@ -607,6 +612,7 @@ export function mountIteration(
     diverged = false
     stateCallback?.()
     instance.loop()
+    isLooping = true
   }
 
   return {
@@ -615,6 +621,21 @@ export function mountIteration(
     },
     reset: doReset,
     startAt: beginOrbit,
+    pause() {
+      const wasLooping = isLooping
+      instance.noLoop()
+      isLooping = false
+      instance.redraw()
+      return wasLooping
+    },
+    resume(shouldLoop = true) {
+      if (shouldLoop) {
+        instance.loop()
+        isLooping = true
+      } else {
+        instance.redraw()
+      }
+    },
     update(ov) {
       if (ov.iterates !== undefined) iterates = ov.iterates
       if (ov.lag !== undefined) lag = ov.lag

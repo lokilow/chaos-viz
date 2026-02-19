@@ -18,6 +18,10 @@ type CanvasExportButtonProps = {
   subtitle?: string
   metadata?: ExportMeta[]
   fileName?: string
+  /** Optional hook to run before capture (e.g. pause animation). */
+  beforeExport?: () => void | Promise<void>
+  /** Optional hook to run after capture (e.g. resume animation). */
+  afterExport?: () => void | Promise<void>
   /** Marks this button as hidden from DOM-based exports. */
   ignoreInExport?: boolean
   class?: string
@@ -30,6 +34,8 @@ export default function CanvasExportButton(props: CanvasExportButtonProps) {
     if (exporting()) return
     setExporting(true)
     try {
+      await props.beforeExport?.()
+
       const element = props.getElement?.()
       if (element) {
         await exportElementAsPng(element, {
@@ -47,7 +53,11 @@ export default function CanvasExportButton(props: CanvasExportButtonProps) {
         fileName: props.fileName,
       })
     } finally {
-      setExporting(false)
+      try {
+        await props.afterExport?.()
+      } finally {
+        setExporting(false)
+      }
     }
   }
 

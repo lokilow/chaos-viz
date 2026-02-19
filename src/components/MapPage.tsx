@@ -1,6 +1,7 @@
-import { createSignal, createEffect, For, Show, onMount } from 'solid-js'
+import { createSignal, createEffect, For, Show } from 'solid-js'
 import type { MapDefinition } from '../maps/types'
-import { P5Sketch } from './P5Sketch'
+import P5Plot from './P5Plot'
+import CanvasExportButton from './CanvasExportButton'
 import {
   mountBifurcation,
   mountIteration,
@@ -19,6 +20,13 @@ export function MapPage(props: MapPageProps) {
   const map = props.map
   const bd = map.bifurcationDefaults
   const id = map.iterationDefaults
+  const mapSlug =
+    map.name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'map'
 
   // ---- view toggle ----
   const [view, setView] = createSignal<View>('bifurcation')
@@ -57,6 +65,11 @@ export function MapPage(props: MapPageProps) {
   // ---- handles (set after mount) ----
   let bifHandle: BifurcationHandle | null = null
   let iterHandle: IterationHandle | null = null
+  let bifurcationExportRef: HTMLDivElement | undefined
+  let bifurcationCanvas: HTMLCanvasElement | undefined
+  let iterationExportRef: HTMLDivElement | undefined
+  let iterationCanvas: HTMLCanvasElement | undefined
+  let resumeIterationAfterExport = false
 
   // ---- bifurcation recompute on param change ----
   createEffect(() => {
@@ -244,25 +257,46 @@ export function MapPage(props: MapPageProps) {
             </div>
           </Show>
 
-          {/* Bifurcation sketch */}
-          <div class="overflow-x-auto">
-            <P5Sketch
-              mount={(el) => {
-                bifHandle = mountBifurcation(el, map, {
-                  paramMin: paramMin(),
-                  paramMax: paramMax(),
-                  dParam: dParam(),
-                  N: N(),
-                  plotYMin: plotYMin(),
-                  plotYMax: plotYMax(),
-                  plotX: plotX(),
-                  plotY: plotY(),
-                  params: mapParams(),
-                })
-                setPeriodDoublings(new Map(bifHandle.getPeriodDoublings()))
-                return bifHandle
-              }}
-            />
+          {/* Bifurcation sketch + export */}
+          <div
+            ref={bifurcationExportRef}
+            class="p-3 bg-silver-100 border border-silver-300 rounded-lg shadow-sm"
+          >
+            <div class="mb-2 flex items-start justify-between gap-3">
+              <h3 class="text-base font-semibold text-silver-900">
+                {map.name} Bifurcation
+              </h3>
+              <CanvasExportButton
+                getElement={() => bifurcationExportRef}
+                getCanvas={() => bifurcationCanvas}
+                title={`${map.name} Bifurcation`}
+                fileName={`${mapSlug}-bifurcation`}
+                ignoreInExport
+                class="px-3 py-1.5 rounded bg-grass-700 text-white text-sm font-medium hover:bg-grass-800 transition-colors shadow-sm"
+              />
+            </div>
+            <div class="overflow-x-auto">
+              <P5Plot
+                mount={(el) => {
+                  bifHandle = mountBifurcation(el, map, {
+                    paramMin: paramMin(),
+                    paramMax: paramMax(),
+                    dParam: dParam(),
+                    N: N(),
+                    plotYMin: plotYMin(),
+                    plotYMax: plotYMax(),
+                    plotX: plotX(),
+                    plotY: plotY(),
+                    params: mapParams(),
+                  })
+                  setPeriodDoublings(new Map(bifHandle.getPeriodDoublings()))
+                  return bifHandle
+                }}
+                onCanvas={(canvas) => {
+                  bifurcationCanvas = canvas
+                }}
+              />
+            </div>
           </div>
         </div>
       </Show>
@@ -317,20 +351,48 @@ export function MapPage(props: MapPageProps) {
             </div>
           </Show>
 
-          {/* Iteration sketch */}
-          <div class="overflow-x-auto">
-            <P5Sketch
-              mount={(el) => {
-                iterHandle = mountIteration(el, map, {
-                  speed: iterSpeed(),
-                  params: mapParams(),
-                })
-                iterHandle.onStateChange(() => {
-                  setIterState({ ...iterHandle!.getState() })
-                })
-                return iterHandle
-              }}
-            />
+          {/* Iteration sketch + export */}
+          <div
+            ref={iterationExportRef}
+            class="p-3 bg-silver-100 border border-silver-300 rounded-lg shadow-sm"
+          >
+            <div class="mb-2 flex items-start justify-between gap-3">
+              <h3 class="text-base font-semibold text-silver-900">
+                {map.name} Iteration
+              </h3>
+              <CanvasExportButton
+                getElement={() => iterationExportRef}
+                getCanvas={() => iterationCanvas}
+                title={`${map.name} Iteration`}
+                fileName={`${mapSlug}-iteration`}
+                beforeExport={() => {
+                  resumeIterationAfterExport = iterHandle?.pause() ?? false
+                }}
+                afterExport={() => {
+                  iterHandle?.resume(resumeIterationAfterExport)
+                  resumeIterationAfterExport = false
+                }}
+                ignoreInExport
+                class="px-3 py-1.5 rounded bg-grass-700 text-white text-sm font-medium hover:bg-grass-800 transition-colors shadow-sm"
+              />
+            </div>
+            <div class="overflow-x-auto">
+              <P5Plot
+                mount={(el) => {
+                  iterHandle = mountIteration(el, map, {
+                    speed: iterSpeed(),
+                    params: mapParams(),
+                  })
+                  iterHandle.onStateChange(() => {
+                    setIterState({ ...iterHandle!.getState() })
+                  })
+                  return iterHandle
+                }}
+                onCanvas={(canvas) => {
+                  iterationCanvas = canvas
+                }}
+              />
+            </div>
           </div>
         </div>
       </Show>

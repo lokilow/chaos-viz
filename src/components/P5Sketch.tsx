@@ -1,12 +1,11 @@
-import { onMount, onCleanup } from 'solid-js'
+import P5Plot from './P5Plot'
 
 type Handle = { remove: () => void }
 
+/**
+ * Backward-compatible alias.
+ * Prefer importing `P5Plot` directly for new code.
+ */
 export function P5Sketch(props: { mount: (el: HTMLDivElement) => Handle }) {
-  let container!: HTMLDivElement
-  onMount(() => {
-    const handle = props.mount(container)
-    onCleanup(() => handle.remove())
-  })
-  return <div ref={container} />
+  return <P5Plot mount={props.mount} />
 }

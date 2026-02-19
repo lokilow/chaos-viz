@@ -24,6 +24,7 @@ type CanvasPlotProps = {
   axisLabels?: { x: string; y: string }
   grid?: { x: number; y: number } | false
   run: (ctx: CanvasRenderingContext2D, plot: Plot) => void
+  onClick?: (mathX: number, mathY: number) => void
   class?: string
 }
 
@@ -211,14 +212,27 @@ export default function CanvasPlot(props: CanvasPlotProps) {
     render()
   })
 
+  const handleClick = (e: MouseEvent) => {
+    if (!props.onClick || !canvasRef) return
+    const rect = canvasRef.getBoundingClientRect()
+    const { bounds, width, height } = props
+    const px = e.clientX - rect.left
+    const py = e.clientY - rect.top
+    const mathX = bounds.xMin + (px / width) * (bounds.xMax - bounds.xMin)
+    const mathY = bounds.yMax - (py / height) * (bounds.yMax - bounds.yMin)
+    props.onClick(mathX, mathY)
+  }
+
   return (
     <canvas
       ref={canvasRef}
       style={{
         width: `${props.width}px`,
         height: `${props.height}px`,
+        cursor: props.onClick ? 'crosshair' : undefined,
       }}
       class={props.class}
+      onClick={handleClick}
     />
   )
 }

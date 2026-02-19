@@ -1,5 +1,5 @@
 import { createSignal, onMount, Show } from 'solid-js'
-import { init, identity, logisticParabola } from '../uiua'
+import { init, identity, logisticParabola, cobweb } from '../uiua'
 import CanvasPlot, { type Plot } from './CanvasPlot'
 import Latex from './Latex'
 
@@ -11,6 +11,7 @@ export default function LogisticMap() {
   )
 
   const [r, setR] = createSignal(2.5)
+  const [x0, setX0] = createSignal(0.2)
   const bounds = { xMin: -0.1, xMax: 1.1, yMin: -0.1, yMax: 1.1 }
 
   onMount(async () => {
@@ -55,6 +56,36 @@ export default function LogisticMap() {
       else ctx.lineTo(px, py)
     }
     ctx.stroke()
+
+    // Draw the cobweb path (reactive to r and x0)
+    try {
+      const path = cobweb(r(), x0())
+      ctx.strokeStyle = '#dc2626'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      for (let i = 0; i < path.length; i += 2) {
+        const px = plot.toX(path[i])
+        const py = plot.toY(path[i + 1])
+        if (i === 0) ctx.moveTo(px, py)
+        else ctx.lineTo(px, py)
+      }
+      ctx.stroke()
+    } catch {
+      // cobweb.ua not yet implemented — skip silently
+    }
+
+    // Draw x0 marker on x-axis
+    const markerX = plot.toX(x0())
+    const axisY = plot.toY(0)
+    ctx.fillStyle = '#dc2626'
+    ctx.beginPath()
+    ctx.arc(markerX, axisY, 4, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  const handleCanvasClick = (mathX: number) => {
+    const clamped = Math.max(0, Math.min(1, mathX))
+    setX0(clamped)
   }
 
   return (
@@ -70,8 +101,7 @@ export default function LogisticMap() {
         }
       >
         {/* Controls */}
-        <div class="mb-4 flex items-center gap-6">
-          {/* r slider */}
+        <div class="mb-4 flex flex-wrap items-center gap-6">
           <div class="flex items-center gap-3">
             <label class="text-sm font-medium text-silver-700">
               <Latex math="r" /> = {r().toFixed(2)}
@@ -86,6 +116,20 @@ export default function LogisticMap() {
               class="w-48 accent-grass-600"
             />
           </div>
+          <div class="flex items-center gap-3">
+            <label class="text-sm font-medium text-silver-700">
+              <Latex math="x_0" /> = {x0().toFixed(3)}
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.001"
+              value={x0()}
+              onInput={(e) => setX0(parseFloat(e.currentTarget.value))}
+              class="w-48 accent-red-600"
+            />
+          </div>
         </div>
 
         <div class="flex gap-6">
@@ -98,6 +142,7 @@ export default function LogisticMap() {
             axisLabels={{ x: 'xₙ', y: 'f(xₙ)' }}
             grid={{ x: 0.2, y: 0.2 }}
             run={drawPlot}
+            onClick={(mathX) => handleCanvasClick(mathX)}
             class="border border-silver-300 rounded"
           />
           <div class="flex-1 text-sm text-silver-700 leading-relaxed">
@@ -115,7 +160,8 @@ export default function LogisticMap() {
             </p>
             <p>
               The diagonal line <Latex math="y = x" /> helps visualize fixed
-              points where <Latex math="x_{n+1} = x_n" />.
+              points where <Latex math="x_{n+1} = x_n" />. Click the canvas or
+              drag the <Latex math="x_0" /> slider to set the initial condition.
             </p>
           </div>
         </div>

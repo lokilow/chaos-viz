@@ -25,6 +25,7 @@ gitignore
 
 # Uiua compiled cache
 uiua-modules/cache/
+*.uasm
 
 # System Files
 .DS_Store

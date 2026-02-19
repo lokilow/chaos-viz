@@ -1,5 +1,9 @@
 import { createEffect } from 'solid-js'
 
+/**
+ * Inclusive math-space bounds for the plotted region.
+ * Values are interpreted in the same units as the equations you draw.
+ */
 export type Bounds = {
   xMin: number
   xMax: number
@@ -7,6 +11,9 @@ export type Bounds = {
   yMax: number
 }
 
+/**
+ * Precomputed helpers passed into `run` so drawing code can stay math-first.
+ */
 export type Plot = {
   toX: (x: number) => number
   toY: (y: number) => number
@@ -15,6 +22,20 @@ export type Plot = {
   bounds: Bounds
 }
 
+/**
+ * Base Cartesian canvas renderer used across the app.
+ *
+ * Responsibilities:
+ * - Sets up high-DPI scaling so lines stay sharp on retina displays
+ * - Converts math coordinates <-> pixel coordinates
+ * - Optionally draws background, grid, axes, ticks, and axis labels
+ * - Delegates plot-specific drawing through `run(ctx, plot)`
+ *
+ * Notes:
+ * - `run` should be idempotent. The component fully redraws when reactive props change.
+ * - `onCanvas` exposes the backing element for export workflows.
+ * - `onClick` returns math-space coordinates, not pixel-space coordinates.
+ */
 type CanvasPlotProps = {
   width: number
   height: number
@@ -25,6 +46,7 @@ type CanvasPlotProps = {
   grid?: { x: number; y: number } | false
   run: (ctx: CanvasRenderingContext2D, plot: Plot) => void
   onClick?: (mathX: number, mathY: number) => void
+  onCanvas?: (canvas: HTMLCanvasElement) => void
   class?: string
 }
 
@@ -200,7 +222,8 @@ export default function CanvasPlot(props: CanvasPlotProps) {
   }
 
   createEffect(() => {
-    // Subscribe to all props
+    // Subscribe to all props so the canvas fully redraws on reactive changes.
+    // Prefer replacing object props (`bounds`, `grid`, `axisLabels`) over mutating them.
     props.run
     props.width
     props.height
@@ -225,7 +248,10 @@ export default function CanvasPlot(props: CanvasPlotProps) {
 
   return (
     <canvas
-      ref={canvasRef}
+      ref={(canvas) => {
+        canvasRef = canvas
+        props.onCanvas?.(canvas)
+      }}
       style={{
         width: `${props.width}px`,
         height: `${props.height}px`,

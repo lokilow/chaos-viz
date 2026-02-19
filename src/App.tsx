@@ -2,12 +2,17 @@ import { createSignal, For, Show } from 'solid-js'
 import LogisticMap from './components/LogisticMap'
 import MandelbrotSet from './components/MandelbrotSet'
 import JuliaSet from './components/JuliaSet'
+import { MapPage } from './components/MapPage'
+import { henon } from './maps/henon'
+
+const HenonMap = () => <MapPage map={henon} />
 
 // Define the tabs config
 const TABS = [
   { id: 'logistic', label: 'Logistic Map', component: LogisticMap },
   { id: 'mandelbrot', label: 'Mandelbrot Set', component: MandelbrotSet },
   { id: 'julia', label: 'Julia Set', component: JuliaSet },
+  { id: 'henon', label: 'Hénon Map', component: HenonMap },
 ]
 
 function App() {

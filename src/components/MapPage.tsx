@@ -1,0 +1,339 @@
+import { createSignal, createEffect, For, Show, onMount } from 'solid-js'
+import type { MapDefinition } from '../maps/types'
+import { P5Sketch } from './P5Sketch'
+import {
+  mountBifurcation,
+  mountIteration,
+  type BifurcationHandle,
+  type IterationHandle,
+  type IterationState,
+} from '../sketches/wrap'
+
+type View = 'bifurcation' | 'iteration'
+
+interface MapPageProps {
+  map: MapDefinition
+}
+
+export function MapPage(props: MapPageProps) {
+  const map = props.map
+  const bd = map.bifurcationDefaults
+  const id = map.iterationDefaults
+
+  // ---- view toggle ----
+  const [view, setView] = createSignal<View>('bifurcation')
+
+  // ---- bifurcation params ----
+  const [paramMin, setParamMin] = createSignal(bd.paramMin)
+  const [paramMax, setParamMax] = createSignal(bd.paramMax)
+  const [dParam, setDParam] = createSignal(bd.dParam)
+  const [N, setN] = createSignal(bd.N)
+  const [plotYMin, setPlotYMin] = createSignal(bd.plotYMin)
+  const [plotYMax, setPlotYMax] = createSignal(bd.plotYMax)
+  const [plotX, setPlotX] = createSignal(true)
+  const [plotY, setPlotY] = createSignal(false)
+  const [mapParams, setMapParams] = createSignal({ ...map.defaultParams })
+
+  // ---- bifurcation output ----
+  const [periodDoublings, setPeriodDoublings] = createSignal<
+    Map<number, number>
+  >(new Map())
+
+  // ---- iteration params ----
+  const [iterSpeed, setIterSpeed] = createSignal(id.speed)
+
+  // ---- iteration state display ----
+  const [iterState, setIterState] = createSignal<IterationState>({
+    x: 0,
+    y: 0,
+    step: 0,
+    waiting: true,
+    icX: 0,
+    icY: 0,
+    detectedPeriod: null,
+    cyclePoints: [],
+  })
+
+  // ---- handles (set after mount) ----
+  let bifHandle: BifurcationHandle | null = null
+  let iterHandle: IterationHandle | null = null
+
+  // ---- bifurcation recompute on param change ----
+  createEffect(() => {
+    if (!bifHandle) return
+    bifHandle.update({
+      paramMin: paramMin(),
+      paramMax: paramMax(),
+      dParam: dParam(),
+      N: N(),
+      plotYMin: plotYMin(),
+      plotYMax: plotYMax(),
+      plotX: plotX(),
+      plotY: plotY(),
+      params: mapParams(),
+    })
+    setPeriodDoublings(new Map(bifHandle.getPeriodDoublings()))
+  })
+
+  // ---- iteration speed update ----
+  createEffect(() => {
+    if (!iterHandle) return
+    iterHandle.update({ speed: iterSpeed(), params: mapParams() })
+  })
+
+  const sortedPeriods = () =>
+    [...periodDoublings().entries()].sort(([a], [b]) => a - b)
+
+  return (
+    <div class="space-y-6">
+      {/* View toggle */}
+      <div class="flex gap-2">
+        <button
+          onClick={() => setView('bifurcation')}
+          class={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${
+            view() === 'bifurcation'
+              ? 'bg-grass-700 text-white'
+              : 'bg-silver-200 text-silver-700 hover:bg-silver-300'
+          }`}
+        >
+          Bifurcation
+        </button>
+        <button
+          onClick={() => setView('iteration')}
+          class={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${
+            view() === 'iteration'
+              ? 'bg-grass-700 text-white'
+              : 'bg-silver-200 text-silver-700 hover:bg-silver-300'
+          }`}
+        >
+          Iteration
+        </button>
+      </div>
+
+      {/* Shared map params */}
+      <div class="flex flex-wrap gap-4 items-end">
+        <For each={Object.keys(map.defaultParams)}>
+          {(key) => (
+            <label class="flex flex-col gap-1 text-sm">
+              <span class="font-medium">{key}</span>
+              <input
+                type="number"
+                step="0.01"
+                value={mapParams()[key]}
+                onInput={(e) => {
+                  const v = parseFloat(e.currentTarget.value)
+                  if (!isNaN(v)) setMapParams((prev) => ({ ...prev, [key]: v }))
+                }}
+                class="w-24 border border-silver-300 rounded px-2 py-1 text-sm"
+              />
+            </label>
+          )}
+        </For>
+      </div>
+
+      {/* Bifurcation view */}
+      <Show when={view() === 'bifurcation'}>
+        <div class="space-y-4">
+          {/* Bifurcation controls */}
+          <div class="flex flex-wrap gap-4 items-end text-sm">
+            <label class="flex flex-col gap-1">
+              <span class="font-medium">param min</span>
+              <input
+                type="number"
+                step="0.001"
+                value={paramMin()}
+                onInput={(e) => {
+                  const v = parseFloat(e.currentTarget.value)
+                  if (!isNaN(v)) setParamMin(v)
+                }}
+                class="w-28 border border-silver-300 rounded px-2 py-1"
+              />
+            </label>
+            <label class="flex flex-col gap-1">
+              <span class="font-medium">param max</span>
+              <input
+                type="number"
+                step="0.001"
+                value={paramMax()}
+                onInput={(e) => {
+                  const v = parseFloat(e.currentTarget.value)
+                  if (!isNaN(v)) setParamMax(v)
+                }}
+                class="w-28 border border-silver-300 rounded px-2 py-1"
+              />
+            </label>
+            <label class="flex flex-col gap-1">
+              <span class="font-medium">dParam</span>
+              <input
+                type="number"
+                step="0.00001"
+                value={dParam()}
+                onInput={(e) => {
+                  const v = parseFloat(e.currentTarget.value)
+                  if (!isNaN(v)) setDParam(v)
+                }}
+                class="w-28 border border-silver-300 rounded px-2 py-1"
+              />
+            </label>
+            <label class="flex flex-col gap-1">
+              <span class="font-medium">N</span>
+              <input
+                type="number"
+                step="100"
+                value={N()}
+                onInput={(e) => {
+                  const v = parseInt(e.currentTarget.value, 10)
+                  if (!isNaN(v)) setN(v)
+                }}
+                class="w-24 border border-silver-300 rounded px-2 py-1"
+              />
+            </label>
+            <label class="flex flex-col gap-1">
+              <span class="font-medium">y min</span>
+              <input
+                type="number"
+                step="0.1"
+                value={plotYMin()}
+                onInput={(e) => {
+                  const v = parseFloat(e.currentTarget.value)
+                  if (!isNaN(v)) setPlotYMin(v)
+                }}
+                class="w-24 border border-silver-300 rounded px-2 py-1"
+              />
+            </label>
+            <label class="flex flex-col gap-1">
+              <span class="font-medium">y max</span>
+              <input
+                type="number"
+                step="0.1"
+                value={plotYMax()}
+                onInput={(e) => {
+                  const v = parseFloat(e.currentTarget.value)
+                  if (!isNaN(v)) setPlotYMax(v)
+                }}
+                class="w-24 border border-silver-300 rounded px-2 py-1"
+              />
+            </label>
+            <label class="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={plotX()}
+                onChange={(e) => setPlotX(e.currentTarget.checked)}
+              />
+              <span>plot x</span>
+            </label>
+            <label class="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={plotY()}
+                onChange={(e) => setPlotY(e.currentTarget.checked)}
+              />
+              <span>plot y</span>
+            </label>
+          </div>
+
+          {/* Period-doubling table */}
+          <Show when={sortedPeriods().length > 0}>
+            <div class="text-sm">
+              <span class="font-medium">Period doublings: </span>
+              <span class="text-silver-600">
+                {sortedPeriods()
+                  .map(([period, a]) => `${period} @ ${a.toFixed(5)}`)
+                  .join('  \u2022  ')}
+              </span>
+            </div>
+          </Show>
+
+          {/* Bifurcation sketch */}
+          <div class="overflow-x-auto">
+            <P5Sketch
+              mount={(el) => {
+                bifHandle = mountBifurcation(el, map, {
+                  paramMin: paramMin(),
+                  paramMax: paramMax(),
+                  dParam: dParam(),
+                  N: N(),
+                  plotYMin: plotYMin(),
+                  plotYMax: plotYMax(),
+                  plotX: plotX(),
+                  plotY: plotY(),
+                  params: mapParams(),
+                })
+                setPeriodDoublings(new Map(bifHandle.getPeriodDoublings()))
+                return bifHandle
+              }}
+            />
+          </div>
+        </div>
+      </Show>
+
+      {/* Iteration view */}
+      <Show when={view() === 'iteration'}>
+        <div class="space-y-4">
+          {/* Iteration controls */}
+          <div class="flex flex-wrap gap-4 items-end text-sm">
+            <label class="flex flex-col gap-1">
+              <span class="font-medium">speed</span>
+              <input
+                type="number"
+                min="1"
+                max="50"
+                step="1"
+                value={iterSpeed()}
+                onInput={(e) => {
+                  const v = parseInt(e.currentTarget.value, 10)
+                  if (!isNaN(v) && v > 0) setIterSpeed(v)
+                }}
+                class="w-20 border border-silver-300 rounded px-2 py-1"
+              />
+            </label>
+            <button
+              onClick={() => iterHandle?.reset()}
+              class="px-3 py-1.5 bg-silver-200 hover:bg-silver-300 text-silver-800 rounded text-sm font-medium transition-colors"
+            >
+              Reset
+            </button>
+          </div>
+
+          {/* State display */}
+          <Show when={!iterState().waiting}>
+            <div class="text-sm text-silver-700 font-mono space-y-0.5">
+              <div>
+                IC: ({iterState().icX.toFixed(4)}, {iterState().icY.toFixed(4)})
+              </div>
+              <div>
+                step: {iterState().step} &nbsp;|&nbsp; x:{' '}
+                {iterState().x.toFixed(6)} &nbsp;|&nbsp; y:{' '}
+                {iterState().y.toFixed(6)}
+              </div>
+              <div>
+                period:{' '}
+                {iterState().detectedPeriod === null
+                  ? 'detecting…'
+                  : iterState().detectedPeriod === 0
+                    ? 'chaotic / none'
+                    : String(iterState().detectedPeriod)}
+              </div>
+            </div>
+          </Show>
+
+          {/* Iteration sketch */}
+          <div class="overflow-x-auto">
+            <P5Sketch
+              mount={(el) => {
+                iterHandle = mountIteration(el, map, {
+                  speed: iterSpeed(),
+                  params: mapParams(),
+                })
+                iterHandle.onStateChange(() => {
+                  setIterState({ ...iterHandle!.getState() })
+                })
+                return iterHandle
+              }}
+            />
+          </div>
+        </div>
+      </Show>
+    </div>
+  )
+}

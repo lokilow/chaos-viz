@@ -118,6 +118,148 @@ export default function LogisticMap() {
     setX0(clamped)
   }
 
+  const clamp = (value: number, min: number, max: number) =>
+    Math.min(max, Math.max(min, value))
+
+  const formatValue = (value: number) =>
+    (Math.round(value * 1e6) / 1e6).toFixed(6).replace(/\.?0+$/, '')
+
+  const normalizeR = (value: number) =>
+    Math.round(clamp(value, 0, 4) * 1e6) / 1e6
+  const normalizeX0 = (value: number) =>
+    Math.round(clamp(value, 0, 1) * 1e6) / 1e6
+
+  const updateR = (value: number) => {
+    if (!Number.isFinite(value)) return
+    setR(normalizeR(value))
+  }
+
+  const updateX0 = (value: number) => {
+    if (!Number.isFinite(value)) return
+    setX0(normalizeX0(value))
+  }
+
+  const ParameterControl = (props: {
+    labelMath: string
+    value: number
+    min: number
+    max: number
+    step: number
+    accentClass: string
+    onChange: (value: number) => void
+  }) => {
+    const [editing, setEditing] = createSignal(false)
+    const [draft, setDraft] = createSignal(formatValue(props.value))
+    let inputRef: HTMLInputElement | undefined
+
+    const beginEdit = () => {
+      setDraft(formatValue(props.value))
+      setEditing(true)
+      queueMicrotask(() => {
+        inputRef?.focus()
+        inputRef?.select()
+      })
+    }
+
+    const commitEdit = () => {
+      const parsed = parseFloat(draft())
+      if (Number.isFinite(parsed)) {
+        props.onChange(parsed)
+      }
+      setEditing(false)
+    }
+
+    const cancelEdit = () => {
+      setDraft(formatValue(props.value))
+      setEditing(false)
+    }
+
+    return (
+      <div class="space-y-1">
+        <div class="flex items-center gap-1 text-xs font-mono text-silver-700">
+          <span>
+            <Latex math={props.labelMath} />
+          </span>
+          <span>=</span>
+          <Show
+            when={editing()}
+            fallback={
+              <button
+                type="button"
+                onClick={beginEdit}
+                class="rounded px-1 py-0.5 text-silver-800 hover:bg-white/60 cursor-text"
+              >
+                {formatValue(props.value)}
+              </button>
+            }
+          >
+            <input
+              ref={inputRef}
+              type="text"
+              inputMode="decimal"
+              value={draft()}
+              onInput={(e) => setDraft(e.currentTarget.value)}
+              onBlur={commitEdit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  commitEdit()
+                } else if (e.key === 'Escape') {
+                  e.preventDefault()
+                  cancelEdit()
+                }
+              }}
+              class="w-20 rounded border border-silver-300 bg-white px-1.5 py-0.5 text-left text-xs font-mono text-silver-800"
+            />
+          </Show>
+        </div>
+        <input
+          type="range"
+          min={props.min}
+          max={props.max}
+          step={props.step}
+          value={props.value}
+          onInput={(e) => props.onChange(parseFloat(e.currentTarget.value))}
+          class={`w-20 max-w-full sm:w-24 ${props.accentClass}`}
+        />
+      </div>
+    )
+  }
+
+  const ControlsPanel = (props: {
+    class?: string
+    orientation?: 'column' | 'row'
+  }) => (
+    <div
+      data-export-ignore="true"
+      class={
+        props.class ??
+        `rounded-md border border-silver-300 bg-silver-100/70 backdrop-blur-sm p-2 shadow-md ${
+          props.orientation === 'row' ? 'flex items-end gap-2' : 'space-y-2'
+        }`
+      }
+    >
+      <ParameterControl
+        labelMath="r"
+        value={r()}
+        min={0}
+        max={4}
+        step={0.000001}
+        onChange={updateR}
+        accentClass="accent-grass-600"
+      />
+      <ParameterControl
+        labelMath="x_0"
+        value={x0()}
+        min={0}
+        max={1}
+        step={0.000001}
+        onChange={updateX0}
+        accentClass="accent-red-600"
+      />
+    </div>
+  )
+
   const InfoContent = () => (
     <>
       <p class="mb-3">
@@ -149,101 +291,82 @@ export default function LogisticMap() {
           <div class="text-grass-600 font-mono animate-pulse">{status()}</div>
         }
       >
-        {/* Compact control strip */}
-        <div class="mb-3 flex flex-wrap items-end gap-x-4 gap-y-2">
-          <div class="w-full sm:w-auto text-silver-700">
-            <Latex math="x_{n+1} = r x_n (1 - x_n)" />
-          </div>
-          <div class="flex flex-col gap-2">
-            <label class="text-sm font-medium text-silver-700">
-              <Latex math="r" /> = {r().toFixed(2)}
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="4"
-              step="0.01"
-              value={r()}
-              onInput={(e) => setR(parseFloat(e.currentTarget.value))}
-              class="w-full max-w-56 sm:w-40 accent-grass-600"
-            />
-          </div>
-          <div class="flex flex-col gap-2">
-            <label class="text-sm font-medium text-silver-700">
-              <Latex math="x_0" /> = {x0().toFixed(3)}
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.001"
-              value={x0()}
-              onInput={(e) => setX0(parseFloat(e.currentTarget.value))}
-              class="w-full max-w-56 sm:w-40 accent-red-600"
-            />
-          </div>
-        </div>
-
-        <div class="flex flex-col xl:flex-row gap-4 items-start">
-          <div class="w-full xl:flex-1">
-            {/* Reusable export-card pattern for other plots:
+        <div class="flex flex-col 2xl:flex-row gap-4 items-start">
+          <div class="w-full 2xl:flex-1">
+            <div class="relative">
+              {/* Reusable export-card pattern for other plots:
                 title row + equation/meta + CanvasPlot + export button with getElement */}
-            <div
-              ref={exportCardRef}
-              class="p-3 md:p-4 bg-silver-100 border border-silver-300 rounded-lg shadow-sm"
-            >
-              <div class="mb-1 flex items-start justify-between gap-3">
-                <h3 class="text-lg font-semibold text-silver-900">
-                  Logistic Map
-                </h3>
-                <CanvasExportButton
-                  getElement={() => exportCardRef}
-                  title="Logistic Map"
-                  fileName="logistic-map"
-                  ignoreInExport
-                  class="px-3 py-1.5 rounded bg-grass-700 text-white text-sm font-medium hover:bg-grass-800 transition-colors shadow-sm"
-                />
-              </div>
-              <div class="text-silver-700 mb-1">
-                <Latex math="x_{n+1} = r x_n (1 - x_n)" />
-              </div>
-              <div class="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-mono text-silver-700">
-                <span>
-                  <Latex math="r" />: {r().toFixed(3)}
-                </span>
-                <span>
-                  <Latex math="x_0" />: {x0().toFixed(3)}
-                </span>
-                <span>iterations: {iterations}</span>
-              </div>
               <div
-                ref={(el) => {
-                  if (plotHostRef && plotResizeObserver) {
-                    plotResizeObserver.unobserve(plotHostRef)
-                  }
-                  plotHostRef = el
-                  if (plotResizeObserver) {
-                    plotResizeObserver.observe(el)
-                    queueMicrotask(updatePlotSize)
-                  }
-                }}
-                class="w-full"
+                ref={exportCardRef}
+                class="p-3 md:p-4 bg-silver-100 border border-silver-300 rounded-lg shadow-sm"
               >
-                <CanvasPlot
-                  width={plotWidth()}
-                  height={plotHeight()}
-                  bounds={bounds}
-                  background="#f5f5f4"
-                  axes={true}
-                  axisLabels={{ x: 'xₙ', y: 'f(xₙ)' }}
-                  grid={{ x: 0.2, y: 0.2 }}
-                  run={drawPlot}
-                  onClick={(mathX) => handleCanvasClick(mathX)}
-                  class="border border-silver-300 rounded bg-white"
-                />
+                <div class="mb-2 flex items-start gap-3">
+                  <h3 class="text-lg font-semibold text-silver-900 shrink-0">
+                    Logistic Map
+                  </h3>
+                  <div class="ml-auto flex items-center justify-end">
+                    <div class="relative">
+                      <div class="hidden lg:block absolute right-full top-0 mr-2 z-10">
+                        <ControlsPanel
+                          orientation="row"
+                          class="rounded-md border border-silver-300 bg-silver-100/70 backdrop-blur-sm p-2 shadow-md flex items-end gap-2"
+                        />
+                      </div>
+                      <CanvasExportButton
+                        getElement={() => exportCardRef}
+                        title="Logistic Map"
+                        fileName="logistic-map"
+                        ignoreInExport
+                        class="shrink-0 px-3 py-1.5 rounded bg-grass-700 text-white text-sm font-medium hover:bg-grass-800 transition-colors shadow-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div class="text-silver-700 mb-2">
+                  <Latex math="x_{n+1} = r x_n (1 - x_n)" />
+                </div>
+                <div class="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-mono text-silver-700">
+                  <span>
+                    <Latex math="r" />: {formatValue(r())}
+                  </span>
+                  <span>
+                    <Latex math="x_0" />: {formatValue(x0())}
+                  </span>
+                  <span>iterations: {iterations}</span>
+                </div>
+                <div
+                  ref={(el) => {
+                    if (plotHostRef && plotResizeObserver) {
+                      plotResizeObserver.unobserve(plotHostRef)
+                    }
+                    plotHostRef = el
+                    if (plotResizeObserver) {
+                      plotResizeObserver.observe(el)
+                      queueMicrotask(updatePlotSize)
+                    }
+                  }}
+                  class="w-full"
+                >
+                  <CanvasPlot
+                    width={plotWidth()}
+                    height={plotHeight()}
+                    bounds={bounds}
+                    background="#f5f5f4"
+                    axes={true}
+                    axisLabels={{ x: 'xₙ', y: 'f(xₙ)' }}
+                    grid={{ x: 0.2, y: 0.2 }}
+                    run={drawPlot}
+                    onClick={(mathX) => handleCanvasClick(mathX)}
+                    class="border border-silver-300 rounded bg-white"
+                  />
+                </div>
               </div>
             </div>
-            <details class="mt-3 xl:hidden rounded border border-silver-300 bg-silver-100 p-3 text-sm text-silver-700">
+            {/* Mobile controls live below the card for touch comfort */}
+            <div class="mt-3 lg:hidden">
+              <ControlsPanel class="rounded border border-silver-300 bg-silver-100 p-3 space-y-2" />
+            </div>
+            <details class="mt-3 2xl:hidden rounded border border-silver-300 bg-silver-100 p-3 text-sm text-silver-700">
               <summary class="cursor-pointer font-medium text-silver-800 select-none">
                 About this plot
               </summary>
@@ -252,7 +375,7 @@ export default function LogisticMap() {
               </div>
             </details>
           </div>
-          <div class="hidden xl:block w-[22rem] text-sm text-silver-700 leading-relaxed">
+          <div class="hidden 2xl:block w-[22rem] text-sm text-silver-700 leading-relaxed">
             <InfoContent />
           </div>
         </div>

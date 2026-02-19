@@ -73,6 +73,58 @@ function replaceCanvasesWithImages(source: HTMLElement, clone: HTMLElement) {
   })
 }
 
+function copyFormValues(source: HTMLElement, clone: HTMLElement) {
+  const sourceInputs = Array.from(
+    source.querySelectorAll<HTMLInputElement>('input')
+  )
+  const cloneInputs = Array.from(
+    clone.querySelectorAll<HTMLInputElement>('input')
+  )
+
+  sourceInputs.forEach((sourceInput, i) => {
+    const cloneInput = cloneInputs[i]
+    if (!cloneInput) return
+
+    if (sourceInput.type === 'checkbox' || sourceInput.type === 'radio') {
+      cloneInput.checked = sourceInput.checked
+      if (sourceInput.checked) cloneInput.setAttribute('checked', 'checked')
+      else cloneInput.removeAttribute('checked')
+      return
+    }
+
+    cloneInput.value = sourceInput.value
+    cloneInput.setAttribute('value', sourceInput.value)
+  })
+
+  const sourceTextareas = Array.from(
+    source.querySelectorAll<HTMLTextAreaElement>('textarea')
+  )
+  const cloneTextareas = Array.from(
+    clone.querySelectorAll<HTMLTextAreaElement>('textarea')
+  )
+  sourceTextareas.forEach((sourceEl, i) => {
+    const cloneEl = cloneTextareas[i]
+    if (!cloneEl) return
+    cloneEl.value = sourceEl.value
+    cloneEl.textContent = sourceEl.value
+  })
+
+  const sourceSelects = Array.from(
+    source.querySelectorAll<HTMLSelectElement>('select')
+  )
+  const cloneSelects = Array.from(
+    clone.querySelectorAll<HTMLSelectElement>('select')
+  )
+  sourceSelects.forEach((sourceEl, i) => {
+    const cloneEl = cloneSelects[i]
+    if (!cloneEl) return
+    cloneEl.value = sourceEl.value
+    Array.from(cloneEl.options).forEach((option, idx) => {
+      option.selected = idx === sourceEl.selectedIndex
+    })
+  })
+}
+
 function removeIgnoredNodes(clone: HTMLElement) {
   clone
     .querySelectorAll<HTMLElement>('[data-export-ignore="true"]')
@@ -122,6 +174,7 @@ export async function exportElementAsPng(
   const clone = element.cloneNode(true) as HTMLElement
   copyComputedStyles(element, clone)
   replaceCanvasesWithImages(element, clone)
+  copyFormValues(element, clone)
   removeIgnoredNodes(clone)
 
   const wrapper = document.createElement('div')

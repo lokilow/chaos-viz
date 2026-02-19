@@ -55,11 +55,14 @@ export function MapPage(props: MapPageProps) {
     x: 0,
     y: 0,
     step: 0,
+    maxStep: 0,
     waiting: true,
     icX: 0,
     icY: 0,
     detectedPeriod: null,
     cyclePoints: [],
+    playbackStep: null,
+    isRunning: false,
   })
 
   // ---- handles (set after mount) ----
@@ -322,11 +325,40 @@ export function MapPage(props: MapPageProps) {
               />
             </label>
             <button
+              onClick={() => {
+                if (!iterHandle || iterState().waiting) return
+                if (iterState().isRunning) {
+                  iterHandle.pause()
+                } else {
+                  iterHandle.resume(true)
+                }
+                setIterState({ ...iterHandle.getState() })
+              }}
+              disabled={iterState().waiting}
+              class="px-3 py-1.5 bg-grass-700 hover:bg-grass-800 disabled:bg-silver-300 disabled:text-silver-500 text-white rounded text-sm font-medium transition-colors"
+            >
+              {iterState().isRunning ? 'Pause' : 'Resume'}
+            </button>
+            <button
               onClick={() => iterHandle?.reset()}
               class="px-3 py-1.5 bg-silver-200 hover:bg-silver-300 text-silver-800 rounded text-sm font-medium transition-colors"
             >
               Reset
             </button>
+            <Show
+              when={!iterState().waiting && iterState().playbackStep !== null}
+            >
+              <button
+                onClick={() => {
+                  if (!iterHandle) return
+                  iterHandle.setPlaybackStep(null)
+                  setIterState({ ...iterHandle.getState() })
+                }}
+                class="px-3 py-1.5 bg-silver-200 hover:bg-silver-300 text-silver-800 rounded text-sm font-medium transition-colors"
+              >
+                Live
+              </button>
+            </Show>
           </div>
 
           {/* State display */}
@@ -336,9 +368,17 @@ export function MapPage(props: MapPageProps) {
                 IC: ({iterState().icX.toFixed(4)}, {iterState().icY.toFixed(4)})
               </div>
               <div>
-                step: {iterState().step} &nbsp;|&nbsp; x:{' '}
+                step: {iterState().step}/{iterState().maxStep} &nbsp;|&nbsp; x:{' '}
                 {iterState().x.toFixed(6)} &nbsp;|&nbsp; y:{' '}
                 {iterState().y.toFixed(6)}
+              </div>
+              <div>
+                mode:{' '}
+                {iterState().isRunning
+                  ? 'running'
+                  : iterState().playbackStep === null
+                    ? 'paused'
+                    : 'paused (time travel)'}
               </div>
               <div>
                 period:{' '}
@@ -348,6 +388,34 @@ export function MapPage(props: MapPageProps) {
                     ? 'chaotic / none'
                     : String(iterState().detectedPeriod)}
               </div>
+            </div>
+          </Show>
+
+          <Show when={!iterState().waiting && iterState().maxStep > 0}>
+            <div class="space-y-1">
+              <div class="flex items-center justify-between text-xs text-silver-600 font-medium">
+                <span>timeline</span>
+                <span>
+                  step {iterState().step} of {iterState().maxStep}
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max={iterState().maxStep}
+                step="1"
+                value={iterState().step}
+                onInput={(e) => {
+                  const v = parseInt(e.currentTarget.value, 10)
+                  if (isNaN(v) || !iterHandle) return
+                  if (iterState().isRunning) {
+                    iterHandle.pause()
+                  }
+                  iterHandle.setPlaybackStep(v)
+                  setIterState({ ...iterHandle.getState() })
+                }}
+                class="w-full accent-grass-700"
+              />
             </div>
           </Show>
 
@@ -386,6 +454,7 @@ export function MapPage(props: MapPageProps) {
                   iterHandle.onStateChange(() => {
                     setIterState({ ...iterHandle!.getState() })
                   })
+                  setIterState({ ...iterHandle.getState() })
                   return iterHandle
                 }}
                 onCanvas={(canvas) => {

@@ -1,14 +1,26 @@
-import { createSignal, For, Show } from 'solid-js'
-import LogisticMap from './components/LogisticMap'
-import MandelbrotSet from './components/MandelbrotSet'
-import JuliaSet from './components/JuliaSet'
-import { MapPage } from './components/MapPage'
-import { henon } from './maps/henon'
+import {
+  createSignal,
+  For,
+  Show,
+  Suspense,
+  lazy,
+  type Component,
+} from 'solid-js'
 
-const HenonMap = () => <MapPage map={henon} />
+const LogisticMap = lazy(() => import('./components/LogisticMap'))
+const MandelbrotSet = lazy(() => import('./components/MandelbrotSet'))
+const JuliaSet = lazy(() => import('./components/JuliaSet'))
+const HenonMap = lazy(async () => {
+  const [{ MapPage }, { henon }] = await Promise.all([
+    import('./components/MapPage'),
+    import('./maps/henon'),
+  ])
+  const Page: Component = () => <MapPage map={henon} />
+  return { default: Page }
+})
 
 // Define the tabs config
-const TABS = [
+const TABS: { id: string; label: string; component: Component }[] = [
   { id: 'logistic', label: 'Logistic Map', component: LogisticMap },
   { id: 'mandelbrot', label: 'Mandelbrot Set', component: MandelbrotSet },
   { id: 'julia', label: 'Julia Set', component: JuliaSet },
@@ -67,7 +79,15 @@ function App() {
               <Show when={visited()[tab.id]}>
                 {/* 2. Toggle visibility instead of unmounting (Keep Alive) */}
                 <div class={activeTab() === tab.id ? 'block' : 'hidden'}>
-                  <tab.component />
+                  <Suspense
+                    fallback={
+                      <div class="text-grass-700 font-mono animate-pulse">
+                        Loading {tab.label}…
+                      </div>
+                    }
+                  >
+                    <tab.component />
+                  </Suspense>
                 </div>
               </Show>
             )}

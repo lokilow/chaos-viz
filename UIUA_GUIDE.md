@@ -185,20 +185,22 @@ These are generated cache artifacts, not source structure.
 
 ## Keeping `uiua_primitive_defs.rs` current
 
-If you want to track `uiua-modules/uiua_primitive_defs.rs`, treat it as a synced reference file, not handwritten source.
+If you want to track `docs/reference/uiua/uiua_primitive_defs.rs`, treat it as a synced reference file, not handwritten source.
 
 This repo now includes:
 
 1. `scripts/sync-uiua-primitive-defs.sh`
 2. `bun run uiua:sync-defs`
+3. `bun run uiua:sync-defs-if-needed`
 
 What it does:
 
 1. Reads `uiua_parser` version from `core/Cargo.lock`.
 2. Locates local Cargo registry source for that exact version.
-3. Copies `defs.rs` into `uiua-modules/uiua_primitive_defs.rs` with a generated header.
+3. Copies `defs.rs` into `docs/reference/uiua/uiua_primitive_defs.rs` with a generated header.
 
 This keeps your local doc mirror aligned with the exact Uiua version your Rust/Wasm core uses.
+The `build:wasm` script runs the `--if-needed` sync automatically, so version bumps in `core/Cargo.lock` are picked up on build.
 
 ## Debugging tips
 

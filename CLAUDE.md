@@ -1,5 +1,12 @@
 Please read the @README.md.
 
+Agent and Uiua reference docs:
+
+- `AGENTS.md` (operational agent entrypoint)
+- `UIUA_GUIDE.md` (Uiua coding workflow in this repo)
+- `docs/reference/uiua/uiua_primitive_defs.rs` (synced Uiua primitive defs reference)
+- Refresh defs with `bun run uiua:sync-defs`
+
 I am essentially building a **"Computational Laboratory"** for the math course. We are using SolidJS for components and reactivity, and Uiua/Wasm for the computational engine. The goal with using **Uiua** as the computational engine via Wasm is a deliberate choice to force myself to understand the vector math deeply.
 
 Here is a roadmap that maps the syllabus specifically to the visualization tools you will need.

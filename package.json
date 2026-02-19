@@ -6,11 +6,12 @@
   "scripts": {
     "dev": "bun run build:wasm && vite",
     "build": "bun run build:wasm && tsc && vite build",
-    "build:wasm": "cd core && wasm-pack build --target web --out-dir ../src/pkg",
+    "build:wasm": "bun run uiua:sync-defs-if-needed && cd core && wasm-pack build --target web --out-dir ../src/pkg",
     "uiua:check": "uiua check uiua-modules",
     "uiua:clean-cache": "uiua module clean",
     "uiua:eval": "bash scripts/uiua-wasm-eval.sh",
     "uiua:sync-defs": "bash scripts/sync-uiua-primitive-defs.sh",
+    "uiua:sync-defs-if-needed": "bash scripts/sync-uiua-primitive-defs.sh --if-needed",
     "format": "prettier . --write",
     "prepare": "husky"
   },

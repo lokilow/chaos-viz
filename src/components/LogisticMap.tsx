@@ -1,4 +1,4 @@
-import { createSignal, onMount, Show, For } from 'solid-js'
+import { createSignal, onMount, Show } from 'solid-js'
 import { init, identity, logisticParabola } from '../uiua'
 import CanvasPlot, { type Plot } from './CanvasPlot'
 import Latex from './Latex'
@@ -11,18 +11,6 @@ export default function LogisticMap() {
   )
 
   const [r, setR] = createSignal(2.5)
-  const [visibleIterations, setVisibleIterations] = createSignal({
-    f1: true,
-    f2: false,
-    f3: false,
-    f4: false,
-    f5: false,
-  })
-
-  const toggleIteration = (key: keyof ReturnType<typeof visibleIterations>) => {
-    setVisibleIterations((prev) => ({ ...prev, [key]: !prev[key] }))
-  }
-
   const bounds = { xMin: -0.1, xMax: 1.1, yMin: -0.1, yMax: 1.1 }
 
   onMount(async () => {
@@ -69,14 +57,6 @@ export default function LogisticMap() {
     ctx.stroke()
   }
 
-  const iterationLabels = [
-    { key: 'f1' as const, label: 'f' },
-    { key: 'f2' as const, label: 'f\u00B2' },
-    { key: 'f3' as const, label: 'f\u00B3' },
-    { key: 'f4' as const, label: 'f\u2074' },
-    { key: 'f5' as const, label: 'f\u2075' },
-  ]
-
   return (
     <div class="p-6 bg-silver-50 rounded-lg shadow">
       <h2 class="text-xl font-bold mb-2">Logistic Map</h2>
@@ -105,24 +85,6 @@ export default function LogisticMap() {
               onInput={(e) => setR(parseFloat(e.currentTarget.value))}
               class="w-48 accent-grass-600"
             />
-          </div>
-
-          {/* Iteration checkboxes */}
-          <div class="flex items-center gap-4">
-            <span class="text-sm font-medium text-silver-700">Show:</span>
-            <For each={iterationLabels}>
-              {(item) => (
-                <label class="flex items-center gap-1 text-sm cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={visibleIterations()[item.key]}
-                    onChange={() => toggleIteration(item.key)}
-                    class="accent-grass-600"
-                  />
-                  {item.label}
-                </label>
-              )}
-            </For>
           </div>
         </div>
 

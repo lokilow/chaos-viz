@@ -25,6 +25,8 @@ gitignore
 
 # Uiua compiled cache
 uiua-modules/cache/
+**/uiua-modules/cache/
+**/uiua-modules/uiua-modules/
 *.uasm
 
 # System Files

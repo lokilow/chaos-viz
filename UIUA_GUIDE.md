@@ -27,6 +27,27 @@ The project architecture intentionally separates concerns:
 
 This separation keeps Uiua focused on computation and keeps rendering logic in JS/Canvas where it belongs.
 
+## Shared code strategy (`prelude.ua`)
+
+Your `prelude.ua` approach is good for this app architecture.
+
+You currently share utilities through:
+
+1. Explicit imports in Uiua modules (`~ "prelude.ua" ~ ...`) for local CLI/tooling use.
+2. Runtime prelude injection in `src/uiua/wasm.ts` for browser/Wasm execution.
+
+Why this dual approach is useful:
+
+1. Modules can still be run and type-checked in normal Uiua tooling.
+2. Browser runtime does not rely on file system/module loading.
+3. Shared helpers (`ToPlotData`, `Domain`) stay centralized.
+
+Recommendation:
+
+1. Keep `prelude.ua` small and stable.
+2. Put only broadly shared, shape-stable helpers there.
+3. Keep domain-specific math (e.g., cobweb internals) in dedicated modules.
+
 ## Data contract used by the app
 
 Most plot functions return interleaved coordinates:
@@ -136,6 +157,48 @@ Use this process for new Uiua functions:
    `uiua eval '<expr>'`
 6. Add/adjust TS wrapper in `src/uiua/functions.ts`.
 7. Run full project build.
+
+## Interactive development without cache clutter
+
+### Why nested `uiua-modules` folders appeared
+
+Uiua stores module cache under `uiua-modules/cache` relative to the current working directory.
+
+If you run commands from nested directories (like `uiua-modules/` or `core/`), Uiua may create:
+
+1. `uiua-modules/uiua-modules/...`
+2. `core/uiua-modules/...`
+
+These are generated cache artifacts, not source structure.
+
+### Practical workflow
+
+1. Run Uiua commands from repo root whenever possible.
+2. Use:
+   `bun run uiua:check`
+3. Clean cache from root with:
+   `bun run uiua:clean-cache`
+4. For interactive evaluation that mirrors browser behavior, use:
+   `bun run uiua:eval -- uiua-modules/cobweb.ua "CobwebPath 51 3.7 0.2"`
+
+`uiua:eval` strips imports and prepends `prelude.ua`, matching `src/uiua/wasm.ts` behavior.
+
+## Keeping `uiua_primitive_defs.rs` current
+
+If you want to track `uiua-modules/uiua_primitive_defs.rs`, treat it as a synced reference file, not handwritten source.
+
+This repo now includes:
+
+1. `scripts/sync-uiua-primitive-defs.sh`
+2. `bun run uiua:sync-defs`
+
+What it does:
+
+1. Reads `uiua_parser` version from `core/Cargo.lock`.
+2. Locates local Cargo registry source for that exact version.
+3. Copies `defs.rs` into `uiua-modules/uiua_primitive_defs.rs` with a generated header.
+
+This keeps your local doc mirror aligned with the exact Uiua version your Rust/Wasm core uses.
 
 ## Debugging tips
 

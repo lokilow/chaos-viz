@@ -23,6 +23,9 @@ app.config.timestamp_*.js
 # Temp
 gitignore
 
+# Uiua compiled cache
+uiua-modules/cache/
+
 # System Files
 .DS_Store
 Thumbs.db

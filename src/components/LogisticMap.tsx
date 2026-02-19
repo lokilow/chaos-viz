@@ -1,4 +1,4 @@
-import { createSignal, onMount, Show } from 'solid-js'
+import { createSignal, onCleanup, onMount, Show } from 'solid-js'
 import { init, identity, logisticParabola, cobweb } from '../uiua'
 import CanvasPlot, { type Plot } from './CanvasPlot'
 import CanvasExportButton from './CanvasExportButton'
@@ -13,12 +13,38 @@ export default function LogisticMap() {
 
   const [r, setR] = createSignal(2.5)
   const [x0, setX0] = createSignal(0.2)
+  const [plotWidth, setPlotWidth] = createSignal(600)
+  const [plotHeight, setPlotHeight] = createSignal(460)
   const iterations = 50
   const bounds = { xMin: -0.1, xMax: 1.1, yMin: -0.1, yMax: 1.1 }
   // The export button targets this whole card so exported PNG matches on-screen layout.
   let exportCardRef: HTMLDivElement | undefined
+  let plotHostRef: HTMLDivElement | undefined
+  let plotResizeObserver: ResizeObserver | undefined
+
+  const updatePlotSize = () => {
+    const host = plotHostRef
+    if (!host) return
+    const width = Math.floor(host.getBoundingClientRect().width)
+    if (width <= 0) return
+    const nextWidth = Math.max(280, Math.min(980, width))
+    const ratio =
+      nextWidth >= 900
+        ? 0.6
+        : nextWidth >= 700
+          ? 0.64
+          : nextWidth >= 480
+            ? 0.7
+            : 0.78
+    setPlotWidth(nextWidth)
+    setPlotHeight(Math.max(230, Math.min(620, Math.round(nextWidth * ratio))))
+  }
 
   onMount(async () => {
+    plotResizeObserver = new ResizeObserver(() => updatePlotSize())
+    if (plotHostRef) plotResizeObserver.observe(plotHostRef)
+    onCleanup(() => plotResizeObserver?.disconnect())
+
     try {
       await init()
       setIdentityLine(identity(-0.1, 1.1))
@@ -92,9 +118,31 @@ export default function LogisticMap() {
     setX0(clamped)
   }
 
+  const InfoContent = () => (
+    <>
+      <p class="mb-3">
+        The <strong>logistic map</strong> is a simple recurrence relation that
+        exhibits complex chaotic behavior. Starting from an initial value{' '}
+        <Latex math="x_0" /> between 0 and 1, each iteration applies the map to
+        produce the next value.
+      </p>
+      <p class="mb-3">
+        The parameter <Latex math="r" /> controls the dynamics: for small{' '}
+        <Latex math="r" />, the system settles to a fixed point. As{' '}
+        <Latex math="r" /> increases, the behavior becomes periodic, then
+        chaotic through a series of period-doubling bifurcations.
+      </p>
+      <p>
+        The diagonal line <Latex math="y = x" /> helps visualize fixed points
+        where <Latex math="x_{n+1} = x_n" />. Click the canvas or drag the{' '}
+        <Latex math="x_0" /> slider to set the initial condition.
+      </p>
+    </>
+  )
+
   return (
-    <div class="p-6 bg-silver-50 rounded-lg shadow">
-      <h2 class="text-xl font-bold mb-2">Logistic Map</h2>
+    <div class="p-4 md:p-5 bg-silver-50 rounded-lg shadow">
+      <h2 class="sr-only">Logistic Map</h2>
       <Show
         when={initialized()}
         fallback={
@@ -102,8 +150,8 @@ export default function LogisticMap() {
         }
       >
         {/* Compact control strip */}
-        <div class="mb-4 flex flex-wrap items-end gap-x-5 gap-y-3">
-          <div class="min-w-[220px] text-silver-700">
+        <div class="mb-3 flex flex-wrap items-end gap-x-4 gap-y-2">
+          <div class="w-full sm:w-auto text-silver-700">
             <Latex math="x_{n+1} = r x_n (1 - x_n)" />
           </div>
           <div class="flex flex-col gap-2">
@@ -117,7 +165,7 @@ export default function LogisticMap() {
               step="0.01"
               value={r()}
               onInput={(e) => setR(parseFloat(e.currentTarget.value))}
-              class="w-32 accent-grass-600"
+              class="w-full max-w-56 sm:w-40 accent-grass-600"
             />
           </div>
           <div class="flex flex-col gap-2">
@@ -131,18 +179,18 @@ export default function LogisticMap() {
               step="0.001"
               value={x0()}
               onInput={(e) => setX0(parseFloat(e.currentTarget.value))}
-              class="w-32 accent-red-600"
+              class="w-full max-w-56 sm:w-40 accent-red-600"
             />
           </div>
         </div>
 
-        <div class="flex flex-col lg:flex-row gap-5 items-start">
-          <div class="w-full max-w-[680px]">
+        <div class="flex flex-col xl:flex-row gap-4 items-start">
+          <div class="w-full xl:flex-1">
             {/* Reusable export-card pattern for other plots:
                 title row + equation/meta + CanvasPlot + export button with getElement */}
             <div
               ref={exportCardRef}
-              class="p-4 bg-silver-100 border border-silver-300 rounded-lg shadow-sm"
+              class="p-3 md:p-4 bg-silver-100 border border-silver-300 rounded-lg shadow-sm"
             >
               <div class="mb-1 flex items-start justify-between gap-3">
                 <h3 class="text-lg font-semibold text-silver-900">
@@ -156,10 +204,10 @@ export default function LogisticMap() {
                   class="px-3 py-1.5 rounded bg-grass-700 text-white text-sm font-medium hover:bg-grass-800 transition-colors shadow-sm"
                 />
               </div>
-              <div class="text-silver-700 mb-2">
+              <div class="text-silver-700 mb-1">
                 <Latex math="x_{n+1} = r x_n (1 - x_n)" />
               </div>
-              <div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-mono text-silver-700">
+              <div class="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-mono text-silver-700">
                 <span>
                   <Latex math="r" />: {r().toFixed(3)}
                 </span>
@@ -168,38 +216,44 @@ export default function LogisticMap() {
                 </span>
                 <span>iterations: {iterations}</span>
               </div>
-              <CanvasPlot
-                width={600}
-                height={460}
-                bounds={bounds}
-                background="#f5f5f4"
-                axes={true}
-                axisLabels={{ x: 'xₙ', y: 'f(xₙ)' }}
-                grid={{ x: 0.2, y: 0.2 }}
-                run={drawPlot}
-                onClick={(mathX) => handleCanvasClick(mathX)}
-                class="border border-silver-300 rounded bg-white"
-              />
+              <div
+                ref={(el) => {
+                  if (plotHostRef && plotResizeObserver) {
+                    plotResizeObserver.unobserve(plotHostRef)
+                  }
+                  plotHostRef = el
+                  if (plotResizeObserver) {
+                    plotResizeObserver.observe(el)
+                    queueMicrotask(updatePlotSize)
+                  }
+                }}
+                class="w-full"
+              >
+                <CanvasPlot
+                  width={plotWidth()}
+                  height={plotHeight()}
+                  bounds={bounds}
+                  background="#f5f5f4"
+                  axes={true}
+                  axisLabels={{ x: 'xₙ', y: 'f(xₙ)' }}
+                  grid={{ x: 0.2, y: 0.2 }}
+                  run={drawPlot}
+                  onClick={(mathX) => handleCanvasClick(mathX)}
+                  class="border border-silver-300 rounded bg-white"
+                />
+              </div>
             </div>
+            <details class="mt-3 xl:hidden rounded border border-silver-300 bg-silver-100 p-3 text-sm text-silver-700">
+              <summary class="cursor-pointer font-medium text-silver-800 select-none">
+                About this plot
+              </summary>
+              <div class="mt-2 leading-relaxed">
+                <InfoContent />
+              </div>
+            </details>
           </div>
-          <div class="max-w-sm text-sm text-silver-700 leading-relaxed">
-            <p class="mb-3">
-              The <strong>logistic map</strong> is a simple recurrence relation
-              that exhibits complex chaotic behavior. Starting from an initial
-              value <Latex math="x_0" /> between 0 and 1, each iteration applies
-              the map to produce the next value.
-            </p>
-            <p class="mb-3">
-              The parameter <Latex math="r" /> controls the dynamics: for small{' '}
-              <Latex math="r" />, the system settles to a fixed point. As{' '}
-              <Latex math="r" /> increases, the behavior becomes periodic, then
-              chaotic through a series of period-doubling bifurcations.
-            </p>
-            <p>
-              The diagonal line <Latex math="y = x" /> helps visualize fixed
-              points where <Latex math="x_{n+1} = x_n" />. Click the canvas or
-              drag the <Latex math="x_0" /> slider to set the initial condition.
-            </p>
+          <div class="hidden xl:block w-[22rem] text-sm text-silver-700 leading-relaxed">
+            <InfoContent />
           </div>
         </div>
       </Show>

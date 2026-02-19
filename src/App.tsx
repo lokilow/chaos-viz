@@ -42,16 +42,33 @@ function App() {
   return (
     <div class="min-h-screen bg-silver-100 flex flex-col font-sans text-silver-900">
       {/* Header */}
-      <header class="bg-grass-900 text-white p-4 shadow-md">
-        <div class="max-w-5xl mx-auto flex items-center justify-between">
+      <header class="bg-grass-900 text-white py-3 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 md:px-5 flex items-center justify-between">
           <h1 class="text-2xl font-bold tracking-tight">Chaos & Fractals</h1>
         </div>
       </header>
 
       {/* Main Content */}
-      <main class="flex-1 w-full max-w-5xl mx-auto p-4 md:p-8">
+      <main class="flex-1 w-full max-w-7xl mx-auto p-3 md:p-5">
+        {/* Mobile tab selector */}
+        <div class="mb-3 md:hidden">
+          <label for="plot-tab-select" class="sr-only">
+            Select plot
+          </label>
+          <select
+            id="plot-tab-select"
+            value={activeTab()}
+            onChange={(e) => switchTab(e.currentTarget.value)}
+            class="w-full rounded border border-silver-300 bg-white px-3 py-2 text-sm font-medium text-silver-800"
+          >
+            <For each={TABS}>
+              {(tab) => <option value={tab.id}>{tab.label}</option>}
+            </For>
+          </select>
+        </div>
+
         {/* Tab Navigation */}
-        <div class="flex border-b border-silver-300 mb-8 overflow-x-auto">
+        <div class="hidden md:flex border-b border-silver-300 mb-5 overflow-x-auto">
           <For each={TABS}>
             {(tab) => (
               <button

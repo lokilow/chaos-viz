@@ -375,7 +375,7 @@ export default function LogisticMap() {
               </div>
             </details>
           </div>
-          <div class="hidden 2xl:block w-[22rem] text-sm text-silver-700 leading-relaxed">
+          <div class="hidden 2xl:block w-88 text-sm text-silver-700 leading-relaxed">
             <InfoContent />
           </div>
         </div>

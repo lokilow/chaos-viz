@@ -9,6 +9,7 @@ import {
 
 const LogisticMap = lazy(() => import('./components/LogisticMap'))
 const QuadraticMap = lazy(() => import('./components/QuadraticMap'))
+const ConjugacyView = lazy(() => import('./components/ConjugacyView'))
 const MandelbrotSet = lazy(() => import('./components/MandelbrotSet'))
 const JuliaSet = lazy(() => import('./components/JuliaSet'))
 const HenonMap = lazy(async () => {
@@ -24,6 +25,7 @@ const HenonMap = lazy(async () => {
 const TABS: { id: string; label: string; component: Component }[] = [
   { id: 'logistic', label: 'Logistic Map', component: LogisticMap },
   { id: 'quadratic', label: 'Quadratic Map', component: QuadraticMap },
+  { id: 'conjugacy', label: 'Conjugacy', component: ConjugacyView },
   { id: 'mandelbrot', label: 'Mandelbrot Set', component: MandelbrotSet },
   { id: 'julia', label: 'Julia Set', component: JuliaSet },
   { id: 'henon', label: 'Hénon Map', component: HenonMap },

@@ -2,66 +2,7 @@ import { createSignal, createEffect, onMount, onCleanup, Show } from 'solid-js'
 import CanvasPlot, { type Plot } from './CanvasPlot'
 import CanvasExportButton from './CanvasExportButton'
 import Latex from './Latex'
-
-// ---------------------------------------------------------------------------
-// Pure computation helpers — outside component, never recreated
-// ---------------------------------------------------------------------------
-
-/**
- * Compile a JS expression string into a callable function.
- * Accepts standard JS math: "2 - x*x", "Math.sin(x)", "4*x*(1-x)"
- * Returns the function on success, or an Error describing the problem.
- */
-function compileExpr(expr: string): ((x: number) => number) | Error {
-  try {
-    // "use strict" prevents access to outer scope; only `x` and Math builtins are usable
-    const fn = new Function('x', `"use strict"; return (${expr});`) as (
-      x: number
-    ) => number
-    fn(0) // test call — catches runtime errors like missing arguments
-    return fn
-  } catch (e) {
-    return e instanceof Error ? e : new Error(String(e))
-  }
-}
-
-/**
- * Generate the cobweb path as a flat [x0,y0, x1,y1, ...] array.
- * Pattern: start at (x0, 0), then for each step:
- *   vertical: (x, 0/prev_y) → (x, f(x))
- *   horizontal: (x, f(x)) → (f(x), f(x))
- */
-function cobwebPath(f: (x: number) => number, x0: number, n: number): number[] {
-  const pts: number[] = [x0, 0]
-  let x = x0
-  for (let i = 0; i < n; i++) {
-    const y = f(x)
-    pts.push(x, y) // vertical: up to curve
-    pts.push(y, y) // horizontal: over to diagonal
-    x = y
-    if (!isFinite(x)) break // orbit escaped
-  }
-  return pts
-}
-
-/**
- * Sample the curve f(x) over [xMin, xMax] as a flat [x0,y0, x1,y1, ...] array.
- * Skips points where f(x) is non-finite (poles, overflow).
- */
-function sampleCurve(
-  f: (x: number) => number,
-  xMin: number,
-  xMax: number,
-  n = 200
-): number[] {
-  const pts: number[] = []
-  for (let i = 0; i <= n; i++) {
-    const x = xMin + (i / n) * (xMax - xMin)
-    const y = f(x)
-    pts.push(x, y)
-  }
-  return pts
-}
+import { compileExpr, cobwebPath, sampleCurve } from '../utils/cobweb'
 
 // ---------------------------------------------------------------------------
 // Component

@@ -43,6 +43,7 @@ export interface BifurcationHandle {
   redraw: () => void
   update: (overrides: BifurcationOverrides) => void
   getPeriodDoublings: () => Map<number, number>
+  getLyapunovPoints: () => { a: number; lambda: number }[]
 }
 
 export function mountBifurcation(
@@ -65,10 +66,15 @@ export function mountBifurcation(
   // computed data
   let points: { a: number; x: number; y: number }[] = []
   let periodDoublings: Map<number, number> = new Map()
+  let lyapunovPoints: { a: number; lambda: number }[] = []
+
+  // whether to use fresh random IC per parameter value
+  const useRandomIC = overrides?.ic == null && (mapDef.randomIC ?? false)
 
   function compute() {
     points = []
     periodDoublings = new Map()
+    lyapunovPoints = []
     const sweepParam = mapDef.bifurcationParam
     const S = 12
     const tol = 1e-5
@@ -78,8 +84,8 @@ export function mountBifurcation(
 
       const xArr = new Float64Array(N + 1)
       const yArr = new Float64Array(N + 1)
-      xArr[0] = ic[0]
-      yArr[0] = ic[1]
+      xArr[0] = useRandomIC ? Math.random() : ic[0]
+      yArr[0] = useRandomIC ? 0 : ic[1]
 
       let diverged = false
       for (let i = 0; i < N; i++) {
@@ -92,6 +98,22 @@ export function mountBifurcation(
         }
       }
       if (diverged) continue
+
+      // Lyapunov exponent: average log|f'(x)| over iterates 101..N (indices 100..N-1)
+      if (mapDef.lyapunovDerivative && N > 100) {
+        let lyapSum = 0
+        let lyapCount = 0
+        for (let i = 100; i < N; i++) {
+          const deriv = mapDef.lyapunovDerivative(xArr[i], p)
+          if (deriv !== 0) {
+            lyapSum += Math.log(Math.abs(deriv))
+            lyapCount++
+          }
+        }
+        if (lyapCount > 0) {
+          lyapunovPoints.push({ a, lambda: lyapSum / lyapCount })
+        }
+      }
 
       let period = S
       let found = false
@@ -251,6 +273,149 @@ export function mountBifurcation(
     },
     getPeriodDoublings() {
       return periodDoublings
+    },
+    getLyapunovPoints() {
+      return lyapunovPoints
+    },
+  }
+}
+
+// ============================================================
+// Lyapunov Plot
+// ============================================================
+
+export interface LyapunovHandle {
+  remove: () => void
+  redraw: () => void
+  setData: (pts: { a: number; lambda: number }[], paramMin: number, paramMax: number) => void
+}
+
+export function mountLyapunov(
+  container: HTMLElement,
+  pts: { a: number; lambda: number }[],
+  paramMin: number,
+  paramMax: number
+): LyapunovHandle {
+  let data = pts
+  let pMin = paramMin
+  let pMax = paramMax
+
+  // compute y range from data (with some padding)
+  function yRange() {
+    if (data.length === 0) return { yMin: -2, yMax: 1 }
+    let lo = Infinity
+    let hi = -Infinity
+    for (const pt of data) {
+      if (pt.lambda < lo) lo = pt.lambda
+      if (pt.lambda > hi) hi = pt.lambda
+    }
+    const pad = Math.max(0.1, (hi - lo) * 0.1)
+    return { yMin: lo - pad, yMax: hi + pad }
+  }
+
+  let instance: p5
+
+  const sketch = (p: p5) => {
+    p.setup = () => {
+      p.createCanvas(W, H)
+      p.background(255)
+      p.noLoop()
+    }
+
+    p.draw = () => {
+      p.background(255)
+      const { yMin, yMax } = yRange()
+
+      function mapPx(a: number) {
+        return p.map(a, pMin, pMax, MARGIN.left, W - MARGIN.right)
+      }
+      function mapPy(v: number) {
+        return p.map(v, yMin, yMax, H - MARGIN.bottom, MARGIN.top)
+      }
+
+      // axes
+      p.stroke(0)
+      p.strokeWeight(1)
+      p.line(MARGIN.left, H - MARGIN.bottom, W - MARGIN.right, H - MARGIN.bottom)
+      p.line(MARGIN.left, MARGIN.top, MARGIN.left, H - MARGIN.bottom)
+
+      // tick labels
+      p.textSize(12)
+      p.fill(0)
+      p.noStroke()
+
+      p.textAlign(p.CENTER, p.TOP)
+      const xStep = niceStep(pMax - pMin)
+      for (let a = ceilTo(pMin, xStep); a <= pMax + 0.0001; a += xStep) {
+        const px = mapPx(a)
+        p.stroke(0)
+        p.line(px, H - MARGIN.bottom, px, H - MARGIN.bottom + 6)
+        p.noStroke()
+        p.text(a.toFixed(3), px, H - MARGIN.bottom + 10)
+      }
+
+      p.textAlign(p.RIGHT, p.CENTER)
+      const yStep = niceStep(yMax - yMin)
+      for (let v = ceilTo(yMin, yStep); v <= yMax + 0.0001; v += yStep) {
+        const py = mapPy(v)
+        p.stroke(0)
+        p.line(MARGIN.left - 6, py, MARGIN.left, py)
+        p.noStroke()
+        p.text(v.toFixed(2), MARGIN.left - 10, py)
+      }
+
+      // horizontal guide line at λ = 0
+      const py0 = mapPy(0)
+      p.stroke(220, 50, 50)
+      p.strokeWeight(1.5)
+      ;(p.drawingContext as CanvasRenderingContext2D).setLineDash([6, 4])
+      p.line(MARGIN.left, py0, W - MARGIN.right, py0)
+      ;(p.drawingContext as CanvasRenderingContext2D).setLineDash([])
+
+      // Lyapunov points
+      p.stroke(0)
+      p.strokeWeight(1)
+      for (const pt of data) {
+        p.point(mapPx(pt.a), mapPy(pt.lambda))
+      }
+
+      // labels
+      p.noStroke()
+      p.fill(0)
+      p.textAlign(p.CENTER, p.TOP)
+      p.textSize(18)
+      p.textStyle(p.BOLD)
+      p.text('Lyapunov Exponent', W / 2, 15)
+      p.textStyle(p.NORMAL)
+      p.textSize(14)
+      p.text('parameter a', W / 2, H - 20)
+
+      p.push()
+      p.translate(18, H / 2)
+      p.rotate(-p.HALF_PI)
+      p.textAlign(p.CENTER, p.CENTER)
+      p.textSize(14)
+      p.text('λ', 0, 0)
+      p.pop()
+    }
+
+    instance = p
+  }
+
+  new p5(sketch, container)
+
+  return {
+    remove() {
+      instance.remove()
+    },
+    redraw() {
+      instance.redraw()
+    },
+    setData(newPts, newPMin, newPMax) {
+      data = newPts
+      pMin = newPMin
+      pMax = newPMax
+      instance.redraw()
     },
   }
 }

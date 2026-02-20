@@ -25,4 +25,8 @@ export interface MapDefinition {
   }
   /** Defaults for the iteration animation */
   iterationDefaults: { iterates: number; lag: number; speed: number }
+  /** If true, generate a fresh random x₀ ∈ (0,1) for each parameter value in bifurcation sweeps */
+  randomIC?: boolean
+  /** Derivative of the map w.r.t. x, for Lyapunov exponent computation */
+  lyapunovDerivative?: (x: number, params: Record<string, number>) => number
 }

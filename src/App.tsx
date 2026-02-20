@@ -20,6 +20,7 @@ const HenonMap = lazy(async () => {
   const Page: Component = () => <MapPage map={henon} />
   return { default: Page }
 })
+const LogisticBifurcation = lazy(() => import('./components/LogisticBifurcation'))
 
 // Define the tabs config
 const TABS: { id: string; label: string; component: Component }[] = [
@@ -29,6 +30,7 @@ const TABS: { id: string; label: string; component: Component }[] = [
   { id: 'mandelbrot', label: 'Mandelbrot Set', component: MandelbrotSet },
   { id: 'julia', label: 'Julia Set', component: JuliaSet },
   { id: 'henon', label: 'Hénon Map', component: HenonMap },
+  { id: 'logistic-bif', label: 'Logistic Bifurcation', component: LogisticBifurcation },
 ]
 
 function App() {

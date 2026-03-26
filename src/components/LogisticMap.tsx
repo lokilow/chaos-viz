@@ -15,7 +15,7 @@ export default function LogisticMap() {
   const [x0, setX0] = createSignal(0.2)
   const [plotWidth, setPlotWidth] = createSignal(600)
   const [plotHeight, setPlotHeight] = createSignal(460)
-  const iterations = 50
+  const iterations = 500
   const bounds = { xMin: -0.1, xMax: 1.1, yMin: -0.1, yMax: 1.1 }
   // The export button targets this whole card so exported PNG matches on-screen layout.
   let exportCardRef: HTMLDivElement | undefined

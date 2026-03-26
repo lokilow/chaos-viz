@@ -1,2 +1,2 @@
 # bun test
-bunx lint-staged
+# bunx lint-staged

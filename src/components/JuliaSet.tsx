@@ -157,18 +157,21 @@ export default function JuliaSet() {
         accentClass="accent-red-600"
       />
       <div class="space-y-1">
-        <div class="text-xs font-mono text-silver-600">presets</div>
-        <div class="flex flex-wrap gap-1">
+        <div class="text-xs font-mono text-silver-600">preset</div>
+        <select
+          class="rounded border border-silver-300 bg-white px-1.5 py-0.5 text-xs font-mono text-silver-700"
+          value=""
+          onChange={(e) => {
+            const p = JULIA_PRESETS.find((p) => p.label === e.currentTarget.value)
+            if (p) { setA(p.a); setB(p.b) }
+            e.currentTarget.value = ''
+          }}
+        >
+          <option value="" disabled>choose…</option>
           {JULIA_PRESETS.map((p) => (
-            <button
-              type="button"
-              onClick={() => { setA(p.a); setB(p.b) }}
-              class="rounded border border-silver-300 bg-white px-1.5 py-0.5 text-xs font-mono text-silver-700 hover:bg-silver-50 transition-colors"
-            >
-              {p.label}
-            </button>
+            <option value={p.label}>{p.label}</option>
           ))}
-        </div>
+        </select>
       </div>
     </div>
   )
@@ -228,9 +231,7 @@ export default function JuliaSet() {
                 </div>
               </div>
               <div class="text-silver-700 mb-2">
-                <Latex math="f(z) = z^2 + c" />
-                {', '}
-                <Latex math={`c = ${fmt(a())} + ${fmt(b())}i`} />
+                <Latex math={`f(z) = z^2 + c,\\quad c = ${fmt(a())} ${b() < 0 ? '-' : '+'} ${fmt(Math.abs(b()))}i`} />
               </div>
               <div class="mb-2 text-xs font-mono text-silver-600">
                 {DEFAULT_NITER.toLocaleString()} iterations · IIM

@@ -53,6 +53,8 @@ Phase 4: usability and performance
 Phase 5: deep zoom path
 - Higher precision modes in Julia.
 - Switchable precision strategy by zoom threshold.
+- Add a `zoomLevel` or `pixelScale` parameter to `RenderRequest` so the backend knows when to switch precision modes.
+- At extremely deep zooms, standard 64-bit floats lose precision (visible as pixelated blocks). The backend needs to dynamically switch to arbitrary-precision arithmetic (`BigFloat` in Julia) and `zoomLevel` is the signal to incur that performance hit.
 - Later: perturbation/reference-orbit techniques if you go truly deep.
 
 **Frontend State Model**
@@ -87,6 +89,11 @@ type RenderRequest = {
   coloring: 'escape' | 'smooth'
   supersample?: 1 | 2
   tile?: { x: number; y: number; width: number; height: number }
+  // Future (Phase 5): add zoomLevel or pixelScale here so the backend can
+  // decide when to switch from Float64 to BigFloat. Standard 64-bit floats
+  // lose precision at deep zooms, producing pixelated blocks. The frontend
+  // already tracks zoom as a scalar — passing it through keeps the precision
+  // strategy entirely in Julia where it belongs.
 }
 ```
 

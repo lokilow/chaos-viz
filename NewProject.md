@@ -2,70 +2,71 @@
 
 **Recommendation**
 
-Do not start fully from scratch. Reuse the SolidJS/Vite/Tailwind frontend foundation and some UI patterns from this repo, but do not reuse the current Uiua/Wasm plumbing for the fractal engine. The pieces worth carrying forward are the component style and canvas patterns in [src/components/JuliaSet.tsx](/Users/lokilow/edu/chaos-viz/src/components/JuliaSet.tsx), [src/components/LogisticMap.tsx](/Users/lokilow/edu/chaos-viz/src/components/LogisticMap.tsx), and the existing Vite/Tailwind setup in [package.json](/Users/lokilow/edu/chaos-viz/package.json) and [vite.config.ts](/Users/lokilow/edu/chaos-viz/vite.config.ts). The fractal renderer itself should be a new Julia service.
+Do not start fully from scratch. Reuse the SolidJS/Vite/Tailwind frontend foundation and some UI patterns from your existing repo, but drop the current Uiua/WASM plumbing. The pieces worth carrying forward are the component style and canvas patterns, and the existing Vite/Tailwind setup. 
 
-**Architecture**
+To achieve both rapid local iteration and zero-cost public deployment, utilize a **Phased Engine Strategy**. Start with a Julia HTTP server for local development, and eventually implement an Adapter Pattern to swap to a static, browser-native hybrid engine (WebGPU + Rust WASM) for public GitHub Pages deployment. Drop the Elixir/BEAM orchestration layer; it adds unnecessary overhead for a purely mathematical visualizer.
 
-Use a two-process local app:
+---
 
-- `web`: SolidJS + TypeScript + Tailwind
-- `engine`: Julia HTTP server on `localhost`
+## **Architecture**
 
-Start simple on rendering:
+### Phase 1: Local Development Architecture
+A two-process local app optimized for mathematical exploration:
+* **Web:** SolidJS + TypeScript + Tailwind (served by Vite)
+* **Engine:** Julia HTTP server on `localhost` returning Canvas2D `ImageData` or PNGs.
 
-- `Canvas2D + ImageData` in the browser
-- backend returns either raw RGBA bytes or PNG tiles
-- no WebGL in v1
-- no WebSockets in v1
+### Phase 2: Static Deployment Architecture (The Hybrid Engine)
+A zero-backend static site optimized for performance and sharing:
+* **Web:** SolidJS + TypeScript + Tailwind (hosted on GitHub Pages)
+* **Navigation Engine (Zoom < 10^14):** WebGPU Compute Shaders for 60 FPS exploration using hardware 32-bit/64-bit floats.
+* **Deep Dive Engine (Zoom >= 10^14):** Pure Rust WASM (using `malachite` for arbitrary-precision math and `rayon` for Web Worker multithreading).
 
-Why this is the right first step:
-- Mandelbrot/Julia are pixel fields, so `putImageData` or drawing image tiles is the natural path.
-- Julia can own the heavy math cleanly.
-- The frontend stays focused on viewport state, interaction, and presentation.
+---
 
-**Product Plan**
+## **Product Plan**
 
-Phase 1: Mandelbrot explorer
-- Render the Mandelbrot set for a viewport.
-- Support pan, scroll-zoom, drag-zoom rectangle, reset, and home view.
-- Show coordinates and current zoom scale.
-- Support progressive redraw: low-res preview first, full-res second.
-- Make click on a point set the complex parameter `c`.
+**Phase 1: Mandelbrot explorer (Julia Backend)**
+* Render the Mandelbrot set for a viewport.
+* Support pan, scroll-zoom, drag-zoom rectangle, reset, and home view.
+* Show coordinates and current zoom scale.
+* Support progressive redraw: low-res preview first, full-res second.
+* Make click on a point set the complex parameter `c`.
 
-Phase 2: Linked Julia pane
-- Split UI into two panes: Mandelbrot on the left, Julia on the right.
-- Clicking a point in Mandelbrot updates `c` and rerenders the Julia set.
-- Show `c = a + bi` prominently.
-- Add a few saved “interesting” `c` presets.
+**Phase 2: Linked Julia pane**
+* Split UI into two panes: Mandelbrot on the left, Julia on the right.
+* Clicking a point in Mandelbrot updates `c` and rerenders the Julia set.
+* Show `c = a + bi` prominently.
+* Add a few saved “interesting” `c` presets.
 
-Phase 3: Julia explorer
-- Julia pane gets its own pan/zoom controls.
-- Preserve the selected `c` while exploring the Julia viewport.
-- Add “sync reset” and “reset Julia viewport”.
+**Phase 3: Julia explorer**
+* Julia pane gets its own pan/zoom controls.
+* Preserve the selected `c` while exploring the Julia viewport.
+* Add “sync reset” and “reset Julia viewport”.
 
-Phase 4: usability and performance
-- Tile-based rendering.
-- Request cancellation from the frontend.
-- Render queue with stale-request dropping.
-- Optional histogram coloring / smooth coloring.
-- Saved views, bookmarks, permalinkable URLs.
+**Phase 4: Usability and performance**
+* Tile-based rendering.
+* Request cancellation from the frontend (`AbortController`).
+* Render queue with stale-request dropping.
+* Optional histogram coloring / smooth coloring.
+* Saved views, bookmarks, permalinkable URLs.
 
-Phase 5: deep zoom path
-- Higher precision modes in Julia.
-- Switchable precision strategy by zoom threshold.
-- Add a `zoomLevel` or `pixelScale` parameter to `RenderRequest` so the backend knows when to switch precision modes.
-- At extremely deep zooms, standard 64-bit floats lose precision (visible as pixelated blocks). The backend needs to dynamically switch to arbitrary-precision arithmetic (`BigFloat` in Julia) and `zoomLevel` is the signal to incur that performance hit.
-- Later: perturbation/reference-orbit techniques if you go truly deep.
+**Phase 5: The Deep Zoom Path & WASM Migration**
+* Implement the `FractalEngine` TypeScript adapter.
+* Build the WebGPU shader for standard navigation.
+* Build the Rust/WASM engine for arbitrary precision.
+* Switchable precision strategy by zoom threshold: Frontend detects zoom level and silently swaps between WebGPU and Rust WASM to prevent pixelation while maximizing framerate.
 
-**Frontend State Model**
+---
 
-Keep state explicit and serializable:
+## **Frontend State Model**
 
-- `mandelbrotViewport`
-- `juliaViewport`
-- `selectedC`
-- `renderSettings`
-- `uiState`
+Keep state explicit, serializable, and engine-agnostic:
+
+* `mandelbrotViewport`
+* `juliaViewport`
+* `selectedC`
+* `renderSettings`
+* `uiState`
 
 Suggested TS shape:
 
@@ -78,6 +79,7 @@ type Viewport = {
   width: number
   height: number
   maxIter: number
+  zoomLevel: number // Crucial for Phase 5 engine swapping
 }
 
 type FractalKind = 'mandelbrot' | 'julia'
@@ -89,23 +91,22 @@ type RenderRequest = {
   coloring: 'escape' | 'smooth'
   supersample?: 1 | 2
   tile?: { x: number; y: number; width: number; height: number }
-  // Future (Phase 5): add zoomLevel or pixelScale here so the backend can
-  // decide when to switch from Float64 to BigFloat. Standard 64-bit floats
-  // lose precision at deep zooms, producing pixelated blocks. The frontend
-  // already tracks zoom as a scalar — passing it through keeps the precision
-  // strategy entirely in Julia where it belongs.
+}
+
+// The Adapter Pattern for Phase 2
+interface FractalEngine {
+  render(request: RenderRequest): Promise<ImageData | Blob>;
 }
 ```
 
-This is the contract I’d build around. It is stable, explicit, and language-agnostic.
+---
 
-**Backend Contract**
+## **Backend Contract (Phase 1: Julia)**
 
 Keep the API narrow. Start with three endpoints:
-
-- `POST /api/render`
-- `POST /api/preview`
-- `GET /api/health`
+* `POST /api/render`
+* `POST /api/preview`
+* `GET /api/health`
 
 `/api/render` request:
 
@@ -117,74 +118,36 @@ Keep the API narrow. Start with three endpoints:
     "spanRe": 3.0,
     "width": 800,
     "height": 600,
-    "maxIter": 500
+    "maxIter": 500,
+    "zoomLevel": 1.0
   },
   "coloring": "smooth",
   "supersample": 1
 }
 ```
 
-For Julia:
+**Response options:** Start with `image/png` for speed of development, then move to raw RGBA arrays only if profiling says it matters or when transitioning to Web Worker messaging in Phase 5.
 
-```json
-{
-  "kind": "julia",
-  "viewport": {
-    "center": { "re": 0.0, "im": 0.0 },
-    "spanRe": 3.0,
-    "width": 800,
-    "height": 800,
-    "maxIter": 500
-  },
-  "juliaC": { "re": -0.7269, "im": 0.1889 },
-  "coloring": "smooth",
-  "supersample": 1
-}
-```
+---
 
-Response options:
+## **Rendering Engine Choice**
 
-1. `image/png`
-   Simplest operationally. Easy to display. Good first version.
+**Recommended v1 render strategy (Local):**
+* Julia computes pixels.
+* Frontend draws returned PNG image into `<canvas>`.
+* On interaction, request a lower-res preview image.
+* After 100-150ms of idle, request full-res.
+* Cancel old requests with `AbortController` and ignore stale responses with a request id.
 
-2. JSON metadata + binary RGBA
-   Better if you want full control over palette work in the frontend.
+**Recommended v2 render strategy (Static Deployment):**
+* `VITE_ENGINE=wasm` environment variable injects the WebGPU/Rust adapter.
+* Frontend passes the `RenderRequest` object to the active engine instead of the `fetch` API.
 
-I would start with PNG for speed of development, then move to raw RGBA only if profiling says it matters.
+---
 
-**Rendering Engine Choice**
+## **Project Structure**
 
-Start with:
-- Julia computes pixels
-- frontend draws returned image into `<canvas>`
-
-Do not start with WebGL. It adds shader complexity before you know where the bottleneck is.
-
-Recommended v1 render strategy:
-- on interaction, request a lower-res preview image
-- after 100-150ms of idle, request full-res
-- cancel old requests with `AbortController`
-- ignore stale responses with a request id
-
-This will feel much more “live” than trying to brute-force full-res every wheel tick.
-
-**What To Reuse From This Repo**
-
-Reuse:
-- Solid/Vite/Tailwind base from [package.json](/Users/lokilow/edu/chaos-viz/package.json)
-- canvas component ideas from [src/components/JuliaSet.tsx](/Users/lokilow/edu/chaos-viz/src/components/JuliaSet.tsx)
-- parameter control and responsive sizing patterns from [src/components/LogisticMap.tsx](/Users/lokilow/edu/chaos-viz/src/components/LogisticMap.tsx)
-
-Do not reuse:
-- Uiua/Wasm bridge
-- current fractal math code as the backend core
-- any assumptions that the compute engine returns plot points rather than pixels
-
-So: reuse the frontend shell and interaction patterns, but create a new fractal app slice.
-
-**Project Structure**
-
-I’d reshape the repo into something like:
+Reshape the repo to support the eventual multi-engine architecture:
 
 ```text
 apps/
@@ -201,80 +164,54 @@ services/
       render.jl
       color.jl
       viewport.jl
+  rust-wasm-engine/    <-- (Added in Phase 5)
+    Cargo.toml
+    src/
+      lib.rs
 scripts/
   dev
   build
 ```
 
-If you want to keep it simpler, keep the frontend in root and put Julia under `julia-engine/`.
+---
 
-**Build / Dev Pipeline**
+## **Build / Dev Pipeline**
 
-To get a Phoenix-like developer experience, make one command start everything.
+Make one command start everything for local development. Use a `justfile` or `Makefile`.
 
-Use:
-- `bun` or `npm` for frontend
-- Julia `Pkg` for backend dependencies
-- a root `justfile`, `mise.toml`, or `Makefile`
-- optionally `overmind`/`foreman` style process management
-
-I’d use a `justfile`. Then dev is:
-
-- `just setup`
-- `just dev`
-- `just test`
+* `just setup`
+* `just dev`
+* `just test`
 
 `just dev` should:
-- start Julia HTTP server on `localhost:4001`
-- start Vite on `localhost:3000`
-- configure Vite proxy `/api -> 4001`
+* Start Julia HTTP server on `localhost:4001`
+* Start Vite on `localhost:3000`
+* Configure Vite proxy `/api -> 4001`
 
-That gives you the “one command, two supervised processes” feel you’re used to.
+**Suggested dev ergonomics:**
+* Vite HMR for frontend.
+* `Revise.jl` in Julia so backend code reloads without constant restart.
+* Typed API client in TypeScript.
+* To solve Julia's "time to first plot" lag, use `PrecompileTools.jl` during the `just dev` boot sequence.
 
-Suggested dev ergonomics:
-- Vite HMR for frontend
-- `Revise.jl` in Julia so backend code reloads without constant restart
-- Vite proxy so the frontend always talks to `/api`
-- typed API client in TypeScript generated or handwritten once
+---
 
-**Nice DX Equivalent to Phoenix**
+## **Deployment Configuration (GitHub Pages)**
 
-To get close to Phoenix quality, build these in early:
+When compiling the Phase 5 Rust/WASM engine, you will need to utilize `SharedArrayBuffer` for `rayon` multithreading. 
 
-- one command dev boot
-- single `.env` or config source for ports
-- clear app folders
-- typed request/response contract
-- request logging on both sides
-- saved example views
-- screenshot export
-- reproducible setup script
+Ensure your static hosting configuration includes the following headers to satisfy browser security requirements:
+* `Cross-Origin-Opener-Policy: same-origin`
+* `Cross-Origin-Embedder-Policy: require-corp`
 
-Julia-specific tooling I’d use:
-- `HTTP.jl`
-- `JSON3.jl`
-- `StructTypes.jl`
-- `Revise.jl`
-- possibly `Colors.jl` if you want palette handling in Julia
+*(Note: If deploying strictly to GitHub Pages, a service worker workaround like `coi-serviceworker` will be required to inject these headers).*
 
-**First Milestone**
+---
 
-I’d define the first real milestone as:
+## **Decision Summary**
 
-1. Open app.
-2. See Mandelbrot set.
-3. Click a point.
-4. Julia pane rerenders for that `c`.
-5. Pan/zoom independently in both panes.
-6. URL stores the current view.
-
-That is the first complete product.
-
-**Decision Summary**
-
-- Start local, not cloud.
-- Start with Julia HTTP, not Julia-in-browser.
-- Start with Canvas2D, not WebGL.
-- Start with PNG/image responses, not sockets.
-- Reuse the frontend shell from this repo, but not the current compute backend.
-- Use a root process runner so the project feels like one app, not two disconnected tools.
+* **Architecture:** Drop Elixir/BEAM. Use a purely static Vite frontend.
+* **Execution (Local):** Start with a local Julia HTTP server to quickly dial in the math, UI, and interactions.
+* **Execution (Production):** Plan for a Phase 5 migration to a browser-native hybrid engine (WebGPU for speed, pure Rust WASM for deep-zoom precision).
+* **Rendering:** Start with Canvas2D + PNG responses. Do not touch WebGL/WebGPU until the UI and state management are flawless.
+* **Tooling:** Use `just` for a single-command dev environment that supervises both Vite and Julia.
